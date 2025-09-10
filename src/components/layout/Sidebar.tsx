@@ -11,7 +11,8 @@ import {
   BarChart3,
   Phone,
   FileText,
-  Bot
+  Bot,
+  Smartphone
 } from 'lucide-react'
 
 const navigation = [
@@ -19,6 +20,11 @@ const navigation = [
     name: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard
+  },
+  {
+    name: 'WhatsApp',
+    href: '/whatsapp',
+    icon: Smartphone
   },
   {
     name: 'Conversas',
