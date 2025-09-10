@@ -11,7 +11,10 @@ import {
   Send,
   Phone,
   MoreVertical,
-  RefreshCw
+  RefreshCw,
+  Paperclip,
+  Image,
+  File
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -52,6 +55,8 @@ export default function ConversationsPage() {
   const [messagesLoading, setMessagesLoading] = useState(false)
   const [newMessage, setNewMessage] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [showFileMenu, setShowFileMenu] = useState(false)
 
   useEffect(() => {
     async function fetchConversations() {
@@ -100,36 +105,83 @@ export default function ConversationsPage() {
     }
   }
 
+  // Selecionar arquivo
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+      setShowFileMenu(false)
+    }
+  }
+
+  // Remover arquivo selecionado
+  const removeSelectedFile = () => {
+    setSelectedFile(null)
+  }
+
   // Enviar nova mensagem
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation || sendingMessage) return
+    if ((!newMessage.trim() && !selectedFile) || !selectedConversation || sendingMessage) return
     
     try {
       setSendingMessage(true)
-      const response = await fetch(`/api/conversations/${selectedConversation}/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: newMessage,
-          instanceName: 'precatorios' // ou obter da configuração
+      
+      // Se há arquivo, enviar como FormData
+      if (selectedFile) {
+        const formData = new FormData()
+        formData.append('file', selectedFile)
+        formData.append('message', newMessage || '')
+        formData.append('instanceName', 'teste2') // usar instância correta
+        
+        const response = await fetch(`/api/conversations/${selectedConversation}/send-media`, {
+          method: 'POST',
+          body: formData
         })
-      })
 
-      if (response.ok) {
-        const data = await response.json()
-        
-        // Adicionar nova mensagem à lista
-        if (conversationDetails) {
-          setConversationDetails(prev => prev ? {
-            ...prev,
-            messages: [...prev.messages, data.message]
-          } : null)
+        if (response.ok) {
+          const data = await response.json()
+          
+          // Adicionar nova mensagem à lista
+          if (conversationDetails) {
+            setConversationDetails(prev => prev ? {
+              ...prev,
+              messages: [...prev.messages, data.message]
+            } : null)
+          }
+          
+          setNewMessage('')
+          setSelectedFile(null)
+          
+          // Atualizar lista de conversas
+          fetchConversations()
         }
-        
-        setNewMessage('')
-        
-        // Atualizar lista de conversas
-        fetchConversations()
+      } else {
+        // Enviar mensagem de texto normal
+        const response = await fetch(`/api/conversations/${selectedConversation}/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: newMessage,
+            instanceName: 'teste2' // usar instância correta
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          
+          // Adicionar nova mensagem à lista
+          if (conversationDetails) {
+            setConversationDetails(prev => prev ? {
+              ...prev,
+              messages: [...prev.messages, data.message]
+            } : null)
+          }
+          
+          setNewMessage('')
+          
+          // Atualizar lista de conversas
+          fetchConversations()
+        }
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
@@ -316,7 +368,91 @@ export default function ConversationsPage() {
                             ? 'bg-blue-100 text-blue-900'
                             : 'bg-primary text-white'
                         }`}>
-                          <p className="text-sm">{message.content}</p>
+                          {/* Renderizar conteúdo baseado no tipo de mensagem */}
+                          {message.type === 'image' && message.metadata?.mediaUrl ? (
+                            <div className="space-y-2">
+                              <img 
+                                src={message.metadata.mediaUrl} 
+                                alt="Imagem enviada" 
+                                className="rounded-lg max-w-full h-auto cursor-pointer"
+                                onClick={() => window.open(message.metadata.mediaUrl, '_blank')}
+                              />
+                              {message.content !== '[Imagem enviada]' && (
+                                <p className="text-sm">{message.content}</p>
+                              )}
+                            </div>
+                          ) : message.type === 'document' ? (
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded">
+                                <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center">
+                                  <span className="text-white text-xs font-bold">
+                                    {message.metadata?.fileName?.split('.').pop()?.toUpperCase() || 'DOC'}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {message.metadata?.fileName || 'Documento'}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    Documento PDF
+                                  </p>
+                                </div>
+                                {message.metadata?.mediaUrl && (
+                                  <button
+                                    onClick={() => window.open(message.metadata.mediaUrl, '_blank')}
+                                    className="text-blue-500 hover:text-blue-700 text-xs"
+                                  >
+                                    Abrir
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ) : message.type === 'audio' ? (
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded">
+                                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                  <span className="text-white text-xs">🎵</span>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    Áudio enviado
+                                  </p>
+                                </div>
+                                {message.metadata?.mediaUrl && (
+                                  <audio controls className="h-8">
+                                    <source src={message.metadata.mediaUrl} type="audio/ogg" />
+                                    <source src={message.metadata.mediaUrl} type="audio/mpeg" />
+                                    Seu navegador não suporta áudio.
+                                  </audio>
+                                )}
+                              </div>
+                            </div>
+                          ) : message.type === 'video' ? (
+                            <div className="space-y-2">
+                              {message.metadata?.mediaUrl ? (
+                                <video 
+                                  controls 
+                                  className="rounded-lg max-w-full h-auto"
+                                  style={{ maxHeight: '200px' }}
+                                >
+                                  <source src={message.metadata.mediaUrl} type="video/mp4" />
+                                  Seu navegador não suporta vídeo.
+                                </video>
+                              ) : (
+                                <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded">
+                                  <div className="w-8 h-8 bg-purple-500 rounded flex items-center justify-center">
+                                    <span className="text-white text-xs">📹</span>
+                                  </div>
+                                  <p className="text-sm">Vídeo enviado</p>
+                                </div>
+                              )}
+                              {message.content !== '[Vídeo enviado]' && (
+                                <p className="text-sm">{message.content}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm">{message.content}</p>
+                          )}
                           <div className="flex items-center justify-between mt-1">
                             <p className={`text-xs ${
                               message.sender === 'user' 
@@ -349,27 +485,87 @@ export default function ConversationsPage() {
                   )}
                 </div>
                 
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    placeholder="Digite sua mensagem..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                    disabled={sendingMessage}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
-                  />
-                  <Button 
-                    size="sm" 
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim() || sendingMessage}
-                  >
-                    {sendingMessage ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </Button>
+                <div className="space-y-2">
+                  {/* Preview do arquivo selecionado */}
+                  {selectedFile && (
+                    <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded-lg">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{selectedFile.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={removeSelectedFile}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center space-x-2">
+                    {/* Botão de anexo */}
+                    <div className="relative">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowFileMenu(!showFileMenu)}
+                        className="p-2"
+                      >
+                        <Paperclip className="w-4 h-4" />
+                      </Button>
+                      
+                      {/* Menu de anexos */}
+                      {showFileMenu && (
+                        <div className="absolute bottom-full left-0 mb-2 bg-white border rounded-lg shadow-lg py-1 min-w-[120px]">
+                          <label className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                            <Image className="w-4 h-4" />
+                            <span className="text-sm">Imagem</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFileSelect}
+                              className="hidden"
+                            />
+                          </label>
+                          <label className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                            <File className="w-4 h-4" />
+                            <span className="text-sm">Documento</span>
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
+                              onChange={handleFileSelect}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Digite sua mensagem..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                      disabled={sendingMessage}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
+                    />
+                    <Button 
+                      size="sm" 
+                      onClick={sendMessage}
+                      disabled={(!newMessage.trim() && !selectedFile) || sendingMessage}
+                    >
+                      {sendingMessage ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : (

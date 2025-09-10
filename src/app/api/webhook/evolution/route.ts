@@ -104,7 +104,13 @@ export async function POST(request: NextRequest) {
             messageId: message.key.id,
             mediaUrl: message.message?.imageMessage?.url || 
                       message.message?.documentMessage?.url || 
-                      message.message?.videoMessage?.url
+                      message.message?.videoMessage?.url,
+            fileName: message.message?.documentMessage?.fileName ||
+                      message.message?.imageMessage?.fileName ||
+                      message.message?.videoMessage?.fileName,
+            mimetype: message.message?.documentMessage?.mimetype ||
+                      message.message?.imageMessage?.mimetype ||
+                      message.message?.videoMessage?.mimetype
           }
         })
 

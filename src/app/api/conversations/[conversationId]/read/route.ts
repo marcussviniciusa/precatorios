@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Conversation from '@/models/Conversation'
+import Lead from '@/models/Lead'
 
 export async function POST(
   request: NextRequest,
