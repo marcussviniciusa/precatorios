@@ -241,8 +241,8 @@ export default function ConversationsPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center mb-6">
+    <div className="h-full flex flex-col">
+      <div className="flex-shrink-0 flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Conversas</h1>
           <p className="text-gray-600">Gerencie todas as conversas do WhatsApp</p>
@@ -259,8 +259,8 @@ export default function ConversationsPage() {
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
-        <Card className="lg:col-span-1 flex flex-col h-full">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
+        <Card className="lg:col-span-1 flex flex-col overflow-hidden">
           <CardHeader className="flex-shrink-0">
             <CardTitle className="flex items-center justify-between">
               <span>Conversas ({conversations.length})</span>
@@ -269,14 +269,16 @@ export default function ConversationsPage() {
               </Button>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0 flex-1 min-h-0">
+          <CardContent className="p-0 flex-1 overflow-hidden">
             {conversations.length === 0 ? (
-              <div className="text-center py-12">
-                <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma conversa</h3>
-                <p className="text-gray-600">
-                  Configure a Evolution API para começar a receber conversas do WhatsApp.
-                </p>
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center py-12">
+                  <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma conversa</h3>
+                  <p className="text-gray-600">
+                    Configure a Evolution API para começar a receber conversas do WhatsApp.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="h-full overflow-y-auto">
@@ -333,7 +335,7 @@ export default function ConversationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2 flex flex-col h-full">
+        <Card className="lg:col-span-2 flex flex-col overflow-hidden">
           <CardHeader className="flex-shrink-0">
             <CardTitle className="flex items-center justify-between">
               {selectedConversation ? (
@@ -355,10 +357,10 @@ export default function ConversationsPage() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col min-h-0">
+          <CardContent className="flex-1 flex flex-col overflow-hidden">
             {selectedConversation ? (
               <div className="flex flex-col h-full">
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-lg mb-4 min-h-0">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-lg mb-4">
                   {messagesLoading ? (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-sm text-gray-500">Carregando mensagens...</div>
