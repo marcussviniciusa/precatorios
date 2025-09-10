@@ -25,7 +25,6 @@ export async function POST(
     }
 
     const conversation = await Conversation.findById(conversationId)
-      .populate('leadId')
 
     if (!conversation) {
       return NextResponse.json(
@@ -34,50 +33,86 @@ export async function POST(
       )
     }
 
-    const lead = conversation.leadId as any
+    // Buscar lead separadamente
+    const lead = await Lead.findById(conversation.leadId)
+    if (!lead) {
+      return NextResponse.json(
+        { error: 'Lead não encontrado' },
+        { status: 404 }
+      )
+    }
 
     try {
-      // Converter arquivo para base64
-      const arrayBuffer = await file.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
-      const base64 = buffer.toString('base64')
-
       // Determinar o tipo de mídia
       const isImage = file.type.startsWith('image/')
       const messageType = isImage ? 'image' : 'document'
       
-      // Preparar o payload para Evolution API
-      const payload = isImage ? {
-        number: lead.phone,
-        mediatype: 'image',
-        media: base64,
-        caption: message || ''
-      } : {
-        number: lead.phone,
-        mediatype: 'document',
-        media: base64,
-        caption: message || '',
-        filename: file.name
+      // Tentar primeiro com FormData (método mais compatível)
+      const evolutionFormData = new FormData()
+      evolutionFormData.append('attachment', file)
+      evolutionFormData.append('number', lead.phone)
+      
+      if (message) {
+        evolutionFormData.append('caption', message)
       }
 
-      // Enviar via Evolution API
-      const evolutionResponse = await fetch(
+      // Enviar via Evolution API usando FormData
+      let evolutionResponse = await fetch(
         `${process.env.EVOLUTION_API_URL}/message/sendMedia/${instanceName}`, 
         {
           method: 'POST',
           headers: {
-            'apikey': process.env.EVOLUTION_API_KEY || '',
-            'Content-Type': 'application/json'
+            'apikey': process.env.EVOLUTION_API_KEY || ''
+            // Não incluir Content-Type para FormData, o browser define automaticamente
           },
-          body: JSON.stringify(payload)
+          body: evolutionFormData
         }
       )
 
+      // Se FormData falhar, tentar com base64
+      if (!evolutionResponse.ok) {
+        console.log('FormData failed, trying base64...')
+        
+        // Converter arquivo para base64
+        const arrayBuffer = await file.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+        const base64 = buffer.toString('base64')
+        
+        // Preparar o payload JSON para Evolution API
+        const payload = {
+          number: lead.phone,
+          mediatype: isImage ? 'image' : 'document',
+          media: base64,
+          fileName: file.name,
+          ...(message && { caption: message })
+        }
+
+        evolutionResponse = await fetch(
+          `${process.env.EVOLUTION_API_URL}/message/sendMedia/${instanceName}`, 
+          {
+            method: 'POST',
+            headers: {
+              'apikey': process.env.EVOLUTION_API_KEY || '',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          }
+        )
+      }
+
       if (!evolutionResponse.ok) {
         const errorData = await evolutionResponse.json()
-        console.error('Evolution API error:', errorData)
+        console.error('Evolution API error:', {
+          status: evolutionResponse.status,
+          statusText: evolutionResponse.statusText,
+          error: errorData,
+          payload: {
+            ...payload,
+            media: '[BASE64_TRUNCATED]' // Não logar o base64 completo
+          }
+        })
         return NextResponse.json(
-          { error: 'Erro ao enviar arquivo via WhatsApp' },
+          { error: `Erro ao enviar arquivo via WhatsApp: ${errorData.response?.message || errorData.message || 'Erro desconhecido'}` },
           { status: 500 }
         )
       }
@@ -96,8 +131,8 @@ export async function POST(
         metadata: {
           messageId: evolutionResult.key?.id,
           fileName: file.name,
-          mimetype: file.type,
-          mediaUrl: `data:${file.type};base64,${base64}` // Para preview local
+          mimetype: file.type
+          // Não salvar mediaUrl para não ocupar muito espaço no banco
         }
       }
 
