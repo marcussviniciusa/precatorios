@@ -13,15 +13,53 @@ export async function POST(request: NextRequest) {
 
     const { event, instance, data } = body
 
-    if (event === 'MESSAGES_UPSERT' && data?.messages) {
-      for (const message of data.messages) {
+    if ((event === 'MESSAGES_UPSERT' || event === 'messages.upsert') && data) {
+      // A mensagem pode vir em data.messages (array) ou diretamente em data (objeto único)
+      const messages = data.messages || [data]
+      
+      for (const message of messages) {
         if (message.key.fromMe) continue // Ignorar mensagens enviadas por nós
 
+        // Verificar se é mensagem de grupo - ignorar grupos
+        if (message.key.remoteJid.includes('@g.us')) {
+          console.log('Ignoring group message:', message.key.remoteJid)
+          continue
+        }
+        
+        console.log('Processing individual message from:', message.key.remoteJid)
+
         const phone = message.key.remoteJid.replace('@s.whatsapp.net', '')
-        const messageText = message.message?.conversation || 
-                           message.message?.extendedTextMessage?.text || ''
+        
+        // Extrair conteúdo da mensagem baseado no tipo
+        let messageText = ''
+        let messageType = 'text'
+        
+        if (message.message?.conversation) {
+          messageText = message.message.conversation
+          messageType = 'text'
+        } else if (message.message?.extendedTextMessage?.text) {
+          messageText = message.message.extendedTextMessage.text
+          messageType = 'text'
+        } else if (message.message?.imageMessage) {
+          messageText = message.message.imageMessage.caption || '[Imagem enviada]'
+          messageType = 'image'
+        } else if (message.message?.documentMessage) {
+          messageText = message.message.documentMessage.caption || `[Documento: ${message.message.documentMessage.fileName || 'arquivo'}]`
+          messageType = 'document'
+        } else if (message.message?.audioMessage) {
+          messageText = '[Áudio enviado]'
+          messageType = 'audio'
+        } else if (message.message?.videoMessage) {
+          messageText = message.message.videoMessage.caption || '[Vídeo enviado]'
+          messageType = 'video'
+        } else {
+          console.log('Unsupported message type:', Object.keys(message.message || {}))
+          continue
+        }
 
         if (!messageText) continue
+
+        console.log(`Message processed: ${messageType} - "${messageText}" from ${phone}`)
 
         // Buscar ou criar lead
         let lead = await Lead.findOne({ phone })
@@ -56,14 +94,17 @@ export async function POST(request: NextRequest) {
         // Adicionar mensagem à conversa
         conversation.messages.push({
           conversationId: conversation._id,
-          type: 'text',
+          type: messageType,
           content: messageText,
           sender: 'user',
           senderName: message.pushName,
           timestamp: new Date(message.messageTimestamp * 1000),
           read: false,
           metadata: {
-            messageId: message.key.id
+            messageId: message.key.id,
+            mediaUrl: message.message?.imageMessage?.url || 
+                      message.message?.documentMessage?.url || 
+                      message.message?.videoMessage?.url
           }
         })
 
@@ -74,7 +115,7 @@ export async function POST(request: NextRequest) {
         await lead.save()
 
         // Processar mensagem para qualificação automática
-        await processMessageForQualification(messageText, lead, conversation)
+        await processMessageForQualification(messageText, lead, conversation, instance)
       }
     }
 
@@ -92,7 +133,8 @@ export async function POST(request: NextRequest) {
 async function processMessageForQualification(
   message: string, 
   lead: any, 
-  conversation: any
+  conversation: any,
+  instanceName: string
 ) {
   const lowerMessage = message.toLowerCase()
   
@@ -144,11 +186,11 @@ async function processMessageForQualification(
   }
 
   // Enviar resposta automática baseada na qualificação
-  await sendAutomaticResponse(lead, conversation, message)
+  await sendAutomaticResponse(lead, conversation, message, instanceName)
 }
 
-async function sendAutomaticResponse(lead: any, conversation: any, userMessage: string) {
-  const evolutionAPI = (await import('@/lib/evolution-api')).default
+async function sendAutomaticResponse(lead: any, conversation: any, userMessage: string, instanceName: string) {
+  // Não usar o evolutionAPI da lib, usar fetch direto com a instância correta
   
   let response = ''
   const lowerMessage = userMessage.toLowerCase()
@@ -172,7 +214,24 @@ async function sendAutomaticResponse(lead: any, conversation: any, userMessage: 
   }
 
   try {
-    await evolutionAPI.sendTextMessage(lead.phone, response)
+    // Enviar mensagem via Evolution API usando a instância correta
+    const evolutionResponse = await fetch(`${process.env.EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
+      method: 'POST',
+      headers: {
+        'apikey': process.env.EVOLUTION_API_KEY || '',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        number: lead.phone,
+        text: response
+      })
+    })
+
+    if (!evolutionResponse.ok) {
+      const errorData = await evolutionResponse.json()
+      console.error('Error sending message via Evolution API:', errorData)
+      return
+    }
     
     // Salvar resposta do bot na conversa
     conversation.messages.push({
@@ -185,6 +244,7 @@ async function sendAutomaticResponse(lead: any, conversation: any, userMessage: 
     })
     
     await conversation.save()
+    console.log(`Bot response sent to ${lead.phone}: "${response}"`)
   } catch (error) {
     console.error('Error sending automatic response:', error)
   }
