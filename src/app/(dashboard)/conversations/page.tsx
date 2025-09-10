@@ -10,7 +10,8 @@ import {
   Clock, 
   Send,
   Phone,
-  MoreVertical
+  MoreVertical,
+  RefreshCw
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -26,10 +27,31 @@ interface ConversationListItem {
   assignedAgent?: string
 }
 
+interface ConversationMessage {
+  _id: string
+  type: 'text' | 'image' | 'document' | 'audio' | 'video'
+  content: string
+  sender: 'user' | 'bot' | 'agent'
+  senderName?: string
+  timestamp: Date
+  read?: boolean
+}
+
+interface ConversationDetails {
+  _id: string
+  leadId: any
+  status: string
+  messages: ConversationMessage[]
+}
+
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState<ConversationListItem[]>([])
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
+  const [conversationDetails, setConversationDetails] = useState<ConversationDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [messagesLoading, setMessagesLoading] = useState(false)
+  const [newMessage, setNewMessage] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
 
   useEffect(() => {
     async function fetchConversations() {
@@ -50,7 +72,77 @@ export default function ConversationsPage() {
     fetchConversations()
   }, [])
 
-    // Mock data é removido - dados vêm da API agora
+  // Carregar mensagens de uma conversa específica
+  const fetchConversationMessages = async (conversationId: string) => {
+    try {
+      setMessagesLoading(true)
+      const response = await fetch(`/api/conversations/${conversationId}/messages`)
+      if (response.ok) {
+        const data = await response.json()
+        setConversationDetails(data.conversation)
+        
+        // Marcar mensagens como lidas
+        await fetch(`/api/conversations/${conversationId}/read`, {
+          method: 'POST'
+        })
+        
+        // Atualizar contador de não lidas na lista
+        setConversations(prev => prev.map(conv => 
+          conv._id === conversationId 
+            ? { ...conv, unreadCount: 0 }
+            : conv
+        ))
+      }
+    } catch (error) {
+      console.error('Erro ao carregar mensagens:', error)
+    } finally {
+      setMessagesLoading(false)
+    }
+  }
+
+  // Enviar nova mensagem
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation || sendingMessage) return
+    
+    try {
+      setSendingMessage(true)
+      const response = await fetch(`/api/conversations/${selectedConversation}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: newMessage,
+          instanceName: 'precatorios' // ou obter da configuração
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Adicionar nova mensagem à lista
+        if (conversationDetails) {
+          setConversationDetails(prev => prev ? {
+            ...prev,
+            messages: [...prev.messages, data.message]
+          } : null)
+        }
+        
+        setNewMessage('')
+        
+        // Atualizar lista de conversas
+        fetchConversations()
+      }
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error)
+    } finally {
+      setSendingMessage(false)
+    }
+  }
+
+  // Lidar com seleção de conversa
+  const handleConversationSelect = (conversationId: string) => {
+    setSelectedConversation(conversationId)
+    fetchConversationMessages(conversationId)
+  }
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
@@ -130,7 +222,7 @@ export default function ConversationsPage() {
                   className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
                     selectedConversation === conversation._id ? 'bg-blue-50 border-l-4 border-l-primary' : ''
                   }`}
-                  onClick={() => setSelectedConversation(conversation._id)}
+                  onClick={() => handleConversationSelect(conversation._id)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center space-x-2">
@@ -182,7 +274,7 @@ export default function ConversationsPage() {
             <CardTitle className="flex items-center justify-between">
               {selectedConversation ? (
                 <span>
-                  Conversa com {conversations.find(c => c._id === selectedConversation)?.leadName}
+                  Conversa com {conversationDetails?.leadId?.name || 'Carregando...'}
                 </span>
               ) : (
                 <span>Selecione uma conversa</span>
@@ -203,43 +295,80 @@ export default function ConversationsPage() {
             {selectedConversation ? (
               <div className="flex flex-col h-[600px]">
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-lg mb-4">
-                  <div className="flex justify-start">
-                    <div className="max-w-xs bg-white p-3 rounded-lg shadow-sm">
-                      <p className="text-sm">Olá! Tenho um precatório de R$ 85.000, como vocês podem me ajudar?</p>
-                      <p className="text-xs text-gray-500 mt-1">10:30</p>
+                  {messagesLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-sm text-gray-500">Carregando mensagens...</div>
                     </div>
-                  </div>
-                  
-                  <div className="flex justify-end">
-                    <div className="max-w-xs bg-primary text-white p-3 rounded-lg">
-                      <p className="text-sm">Olá! Ficamos felizes em ajudá-lo. Podemos acelerar o recebimento do seu precatório. Qual é o estado emissor?</p>
-                      <p className="text-xs opacity-80 mt-1">10:32</p>
+                  ) : conversationDetails?.messages?.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                        <p className="text-sm text-gray-500">Nenhuma mensagem ainda</p>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex justify-start">
-                    <div className="max-w-xs bg-white p-3 rounded-lg shadow-sm">
-                      <p className="text-sm">É do Estado de São Paulo</p>
-                      <p className="text-xs text-gray-500 mt-1">10:33</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end">
-                    <div className="max-w-xs bg-primary text-white p-3 rounded-lg">
-                      <p className="text-sm">Perfeito! São Paulo está na nossa lista de estados atendidos. Vou transferir você para um especialista que vai explicar todo o processo.</p>
-                      <p className="text-xs opacity-80 mt-1">10:35</p>
-                    </div>
-                  </div>
+                  ) : (
+                    conversationDetails?.messages?.map((message, index) => (
+                      <div key={message._id || index} className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'}`}>
+                        <div className={`max-w-xs p-3 rounded-lg ${
+                          message.sender === 'user' 
+                            ? 'bg-white shadow-sm' 
+                            : message.sender === 'bot'
+                            ? 'bg-blue-100 text-blue-900'
+                            : 'bg-primary text-white'
+                        }`}>
+                          <p className="text-sm">{message.content}</p>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className={`text-xs ${
+                              message.sender === 'user' 
+                                ? 'text-gray-500' 
+                                : message.sender === 'bot'
+                                ? 'text-blue-600'
+                                : 'opacity-80'
+                            }`}>
+                              {new Date(message.timestamp).toLocaleTimeString('pt-BR', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </p>
+                            {message.sender === 'user' && (
+                              <span className={`text-xs ${message.read ? 'text-blue-500' : 'text-gray-400'}`}>
+                                {message.read ? '✓✓' : '✓'}
+                              </span>
+                            )}
+                          </div>
+                          {message.senderName && message.sender !== 'user' && (
+                            <p className={`text-xs mt-1 ${
+                              message.sender === 'bot' ? 'text-blue-600' : 'opacity-70'
+                            }`}>
+                              {message.sender === 'bot' ? 'Bot' : message.senderName}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
                 
                 <div className="flex items-center space-x-2">
                   <input
                     type="text"
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                    disabled={sendingMessage}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
                   />
-                  <Button size="sm">
-                    <Send className="w-4 h-4" />
+                  <Button 
+                    size="sm" 
+                    onClick={sendMessage}
+                    disabled={!newMessage.trim() || sendingMessage}
+                  >
+                    {sendingMessage ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               </div>

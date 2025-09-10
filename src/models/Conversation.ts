@@ -16,6 +16,7 @@ const MessageSchema = new Schema<Message>({
   },
   senderName: String,
   timestamp: { type: Date, default: Date.now },
+  read: { type: Boolean, default: false },
   metadata: {
     messageId: String,
     quotedMessage: String,

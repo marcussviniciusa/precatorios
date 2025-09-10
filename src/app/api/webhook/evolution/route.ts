@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
           sender: 'user',
           senderName: message.pushName,
           timestamp: new Date(message.messageTimestamp * 1000),
+          read: false,
           metadata: {
             messageId: message.key.id
           }
@@ -179,7 +180,8 @@ async function sendAutomaticResponse(lead: any, conversation: any, userMessage: 
       type: 'text',
       content: response,
       sender: 'bot',
-      timestamp: new Date()
+      timestamp: new Date(),
+      read: true
     })
     
     await conversation.save()

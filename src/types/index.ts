@@ -62,6 +62,7 @@ export interface Message {
   sender: 'user' | 'bot' | 'agent'
   senderName?: string
   timestamp: Date
+  read?: boolean
   metadata?: {
     messageId?: string
     quotedMessage?: string

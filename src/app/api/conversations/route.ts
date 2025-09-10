@@ -31,7 +31,12 @@ export async function GET(request: NextRequest) {
             $size: {
               $filter: {
                 input: '$messages',
-                cond: { $eq: ['$$this.sender', 'user'] }
+                cond: { 
+                  $and: [
+                    { $eq: ['$$this.sender', 'user'] },
+                    { $ne: ['$$this.read', true] }
+                  ]
+                }
               }
             }
           },

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/input'
@@ -43,6 +43,7 @@ export default function WhatsAppConnectionPage() {
   const [newInstanceName, setNewInstanceName] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<Record<string, string>>({})
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Fetch existing instances
   const fetchInstances = async () => {
@@ -53,6 +54,11 @@ export default function WhatsAppConnectionPage() {
       
       if (response.ok) {
         setInstances(data.instances || [])
+        // Check status of all instances after fetching
+        const instances = data.instances || []
+        instances.forEach((instance: Instance) => {
+          checkConnectionStatus(instance.instanceName)
+        })
       } else {
         toast.error('Erro ao carregar instâncias: ' + data.error)
       }
@@ -153,21 +159,32 @@ export default function WhatsAppConnectionPage() {
   }
 
   // Check connection status
-  const checkConnectionStatus = async (instanceName: string) => {
+  const checkConnectionStatus = useCallback(async (instanceName: string) => {
     try {
       const response = await fetch(`/api/evolution/status/${instanceName}`)
       const data = await response.json()
 
       if (response.ok) {
-        setConnectionStatus(prev => ({
-          ...prev,
-          [instanceName]: data.instance?.state || 'unknown'
-        }))
+        const newState = data.instance?.state || 'unknown'
+        setConnectionStatus(prev => {
+          const prevState = prev[instanceName]
+          
+          // If status changed to 'open', refresh instances data to get profile info
+          if (newState === 'open' && prevState === 'connecting') {
+            toast.success(`Instância ${instanceName} conectada com sucesso!`)
+            fetchInstances()
+          }
+          
+          return {
+            ...prev,
+            [instanceName]: newState
+          }
+        })
       }
     } catch (error) {
       console.error('Error checking status:', error)
     }
-  }
+  }, [])
 
   // Delete instance
   const deleteInstance = async (instanceName: string) => {
@@ -202,26 +219,56 @@ export default function WhatsAppConnectionPage() {
     fetchInstances()
   }, [])
 
+  // Check status immediately when instances are loaded
   useEffect(() => {
     if (instances.length > 0) {
-      const interval = setInterval(() => {
-        instances.forEach(instance => {
-          checkConnectionStatus(instance.instanceName)
-        })
-      }, 10000) // Check every 10 seconds
-
-      return () => clearInterval(interval)
+      instances.forEach(instance => {
+        checkConnectionStatus(instance.instanceName)
+      })
     }
-  }, [instances])
+  }, [instances.length])
+
+  // Setup auto-refresh interval
+  const setupInterval = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+    }
+
+    if (instances.length === 0) return
+
+    // Check if any instance is connecting - use faster refresh
+    const hasConnecting = instances.some(instance => 
+      (connectionStatus[instance.instanceName] || instance.state) === 'connecting'
+    )
+    
+    const refreshInterval = hasConnecting ? 3000 : 15000 // 3s if connecting, 15s otherwise
+
+    intervalRef.current = setInterval(() => {
+      instances.forEach(instance => {
+        checkConnectionStatus(instance.instanceName)
+      })
+    }, refreshInterval)
+  }, [instances, connectionStatus, checkConnectionStatus])
+
+  // Auto-refresh with dynamic interval based on connection status
+  useEffect(() => {
+    setupInterval()
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [setupInterval])
 
   const getStatusBadge = (instance: Instance) => {
+    // Priorize connectionStatus (mais atual) sobre instance.state (do fetchInstances)
     const status = connectionStatus[instance.instanceName] || instance.state || 'close'
     
     switch (status) {
       case 'open':
         return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Conectado</Badge>
       case 'connecting':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Conectando</Badge>
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1 animate-spin" />Conectando</Badge>
       case 'close':
       case 'closed':
         return <Badge variant="destructive"><WifiOff className="w-3 h-3 mr-1" />Desconectado</Badge>
@@ -232,11 +279,25 @@ export default function WhatsAppConnectionPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Conexão WhatsApp</h1>
-        <p className="text-muted-foreground">
-          Gerencie suas conexões WhatsApp via Evolution API
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Conexão WhatsApp</h1>
+          <p className="text-muted-foreground">
+            Gerencie suas conexões WhatsApp via Evolution API
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={fetchInstances}
+          disabled={loading}
+        >
+          {loading ? (
+            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4 mr-2" />
+          )}
+          Atualizar
+        </Button>
       </div>
 
       {/* Create Instance Section */}

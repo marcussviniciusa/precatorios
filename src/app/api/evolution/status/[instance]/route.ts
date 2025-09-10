@@ -21,7 +21,8 @@ export async function GET(
       method: 'GET',
       headers: {
         'apikey': evolutionApiKey
-      }
+      },
+      cache: 'no-store'
     })
 
     const responseText = await response.text()

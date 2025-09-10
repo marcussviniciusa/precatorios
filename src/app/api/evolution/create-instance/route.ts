@@ -14,26 +14,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Dados para criar a instância
-    const instanceData = {
+    // Payload seguindo a documentação oficial Evolution API v2
+    const instanceData: any = {
       instanceName: body.instanceName,
-      integration: body.integration || 'WHATSAPP-BAILEYS',
-      token: body.token,
-      qrcode: body.qrcode || true,
-      number: body.number,
-      rejectCall: body.rejectCall || false,
-      msgCall: body.msgCall,
-      groupsIgnore: body.groupsIgnore || true,
-      alwaysOnline: body.alwaysOnline || true,
-      readMessages: body.readMessages || true,
-      readStatus: body.readStatus || true,
-      syncFullHistory: body.syncFullHistory || false,
-      webhook: {
-        url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/webhook/evolution`,
-        byEvents: true,
-        base64: false
+      integration: 'WHATSAPP-BAILEYS',
+      qrcode: true
+    }
+
+    // Adicionar webhook com estrutura completa
+    const webhookUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+    if (webhookUrl) {
+      instanceData.webhook = {
+        url: `${webhookUrl}/api/webhook/evolution`,
+        enabled: true,
+        events: [
+          'APPLICATION_STARTUP',
+          'QRCODE_UPDATED', 
+          'CONNECTION_UPDATE',
+          'MESSAGES_UPSERT',
+          'MESSAGES_UPDATE',
+          'SEND_MESSAGE'
+        ]
       }
     }
+
+    // Adiciona campos opcionais apenas se fornecidos
+    if (body.token) instanceData.token = body.token
+    if (body.number) instanceData.number = body.number
+    if (body.msgCall) instanceData.msgCall = body.msgCall
 
     console.log('Creating instance with data:', instanceData)
 
@@ -62,8 +70,25 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       console.error('Evolution API error:', data)
+      
+      // Extrair mensagem de erro específica
+      let errorMessage = 'Erro ao criar instância'
+      if (data.response?.message) {
+        if (Array.isArray(data.response.message)) {
+          errorMessage = data.response.message.join(', ')
+        } else {
+          errorMessage = data.response.message
+        }
+      } else if (data.message) {
+        errorMessage = data.message
+      }
+      
       return NextResponse.json(
-        { error: data.message || 'Erro ao criar instância' },
+        { 
+          error: errorMessage,
+          details: data,
+          instanceData: instanceData // Para debug
+        },
         { status: response.status }
       )
     }
