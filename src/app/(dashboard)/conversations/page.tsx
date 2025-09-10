@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -57,6 +57,7 @@ export default function ConversationsPage() {
   const [sendingMessage, setSendingMessage] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [showFileMenu, setShowFileMenu] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     async function fetchConversations() {
@@ -76,6 +77,17 @@ export default function ConversationsPage() {
 
     fetchConversations()
   }, [])
+
+  // Auto-scroll para a última mensagem
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    if (conversationDetails?.messages?.length) {
+      scrollToBottom()
+    }
+  }, [conversationDetails?.messages])
 
   // Carregar mensagens de uma conversa específica
   const fetchConversationMessages = async (conversationId: string) => {
@@ -229,8 +241,8 @@ export default function ConversationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="flex flex-col h-full">
+      <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Conversas</h1>
           <p className="text-gray-600">Gerencie todas as conversas do WhatsApp</p>
@@ -247,9 +259,9 @@ export default function ConversationsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[800px]">
-        <Card className="lg:col-span-1">
-          <CardHeader>
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
+        <Card className="lg:col-span-1 flex flex-col h-full">
+          <CardHeader className="flex-shrink-0">
             <CardTitle className="flex items-center justify-between">
               <span>Conversas ({conversations.length})</span>
               <Button variant="ghost" size="icon">
@@ -257,7 +269,7 @@ export default function ConversationsPage() {
               </Button>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 flex-1 min-h-0">
             {conversations.length === 0 ? (
               <div className="text-center py-12">
                 <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -267,7 +279,7 @@ export default function ConversationsPage() {
                 </p>
               </div>
             ) : (
-              <div className="max-h-[700px] overflow-y-auto">
+              <div className="h-full overflow-y-auto">
                 {conversations.map((conversation) => (
                 <div
                   key={conversation._id}
@@ -321,8 +333,8 @@ export default function ConversationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
+        <Card className="lg:col-span-2 flex flex-col h-full">
+          <CardHeader className="flex-shrink-0">
             <CardTitle className="flex items-center justify-between">
               {selectedConversation ? (
                 <span>
@@ -343,10 +355,10 @@ export default function ConversationsPage() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 flex flex-col min-h-0">
             {selectedConversation ? (
-              <div className="flex flex-col h-[600px]">
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-lg mb-4">
+              <div className="flex flex-col h-full">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-lg mb-4 min-h-0">
                   {messagesLoading ? (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-sm text-gray-500">Carregando mensagens...</div>
@@ -483,9 +495,10 @@ export default function ConversationsPage() {
                       </div>
                     ))
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
                 
-                <div className="space-y-2">
+                <div className="flex-shrink-0 space-y-2">
                   {/* Preview do arquivo selecionado */}
                   {selectedFile && (
                     <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded-lg">
@@ -569,7 +582,7 @@ export default function ConversationsPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-[600px] text-gray-500">
+              <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">
                   <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>Selecione uma conversa para visualizar as mensagens</p>
