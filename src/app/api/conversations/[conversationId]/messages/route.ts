@@ -13,7 +13,6 @@ export async function GET(
     const { conversationId } = params
     
     const conversation = await Conversation.findById(conversationId)
-      .populate('leadId', 'name phone profilePicUrl')
       .select('messages leadId status')
     
     if (!conversation) {
@@ -21,6 +20,12 @@ export async function GET(
         { error: 'Conversa não encontrada' },
         { status: 404 }
       )
+    }
+
+    // Buscar lead separadamente
+    let lead = null
+    if (conversation.leadId) {
+      lead = await Lead.findById(conversation.leadId).select('name phone profilePicUrl')
     }
 
     // Ordenar mensagens por timestamp
@@ -32,7 +37,7 @@ export async function GET(
       success: true,
       conversation: {
         _id: conversation._id,
-        leadId: conversation.leadId,
+        leadId: lead,
         status: conversation.status,
         messages: sortedMessages
       }
