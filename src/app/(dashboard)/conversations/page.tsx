@@ -253,7 +253,7 @@ export default function ConversationsPage() {
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <div className="flex items-center space-x-1">
                       <Clock className="w-3 h-3" />
-                      <span>{formatDate(conversation.lastMessageTime)}</span>
+                      <span>{formatDate(new Date(conversation.lastMessageTime))}</span>
                     </div>
                     {conversation.assignedAgent && (
                       <div className="flex items-center space-x-1">
@@ -325,10 +325,10 @@ export default function ConversationsPage() {
                                 ? 'text-blue-600'
                                 : 'opacity-80'
                             }`}>
-                              {new Date(message.timestamp).toLocaleTimeString('pt-BR', { 
+                              {message.timestamp ? new Date(message.timestamp).toLocaleTimeString('pt-BR', { 
                                 hour: '2-digit', 
                                 minute: '2-digit' 
-                              })}
+                              }) : 'Agora'}
                             </p>
                             {message.sender === 'user' && (
                               <span className={`text-xs ${message.read ? 'text-blue-500' : 'text-gray-400'}`}>

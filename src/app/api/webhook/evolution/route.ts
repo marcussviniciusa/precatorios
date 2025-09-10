@@ -80,11 +80,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Buscar ou criar conversa
-        let conversation = await Conversation.findOne({ leadId: lead._id })
+        let conversation = await Conversation.findOne({ leadId: lead._id.toString() })
         
         if (!conversation) {
           conversation = await Conversation.create({
-            leadId: lead._id,
+            leadId: lead._id.toString(),
             whatsappId: message.key.remoteJid,
             status: 'active',
             messages: []

@@ -7,26 +7,53 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect()
     
+    // Verificar se há conversas
+    const totalConversations = await Conversation.countDocuments()
+    
+    if (totalConversations === 0) {
+      return NextResponse.json([])
+    }
+    
     const conversations = await Conversation.aggregate([
+      {
+        $addFields: {
+          leadObjectId: { $toObjectId: '$leadId' }
+        }
+      },
       {
         $lookup: {
           from: 'leads',
-          localField: 'leadId',
+          localField: 'leadObjectId',
           foreignField: '_id',
           as: 'lead'
         }
       },
       {
-        $unwind: '$lead'
+        $unwind: {
+          path: '$lead',
+          preserveNullAndEmptyArrays: true
+        }
       },
       {
         $project: {
           _id: 1,
-          leadName: '$lead.name',
-          leadPhone: '$lead.phone',
+          leadName: { $ifNull: ['$lead.name', 'Usuário sem nome'] },
+          leadPhone: { $ifNull: ['$lead.phone', 'N/A'] },
           status: 1,
-          lastMessage: { $last: '$messages.content' },
-          lastMessageTime: { $last: '$messages.timestamp' },
+          lastMessage: { 
+            $cond: {
+              if: { $gt: [{ $size: '$messages' }, 0] },
+              then: { $last: '$messages.content' },
+              else: 'Sem mensagens'
+            }
+          },
+          lastMessageTime: { 
+            $cond: {
+              if: { $gt: [{ $size: '$messages' }, 0] },
+              then: { $ifNull: [{ $last: '$messages.timestamp' }, new Date()] },
+              else: { $ifNull: ['$createdAt', new Date()] }
+            }
+          },
           unreadCount: {
             $size: {
               $filter: {
@@ -40,7 +67,7 @@ export async function GET(request: NextRequest) {
               }
             }
           },
-          classification: '$lead.classification',
+          classification: { $ifNull: ['$lead.classification', 'cold'] },
           assignedAgent: '$assignedAgent'
         }
       },

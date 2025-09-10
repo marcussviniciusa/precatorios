@@ -12,14 +12,23 @@ export function formatCurrency(value: number): string {
   }).format(value)
 }
 
-export function formatDate(date: Date): string {
+export function formatDate(date: Date | string | null | undefined): string {
+  if (!date) return 'Data inválida'
+  
+  const validDate = new Date(date)
+  
+  // Verificar se a data é válida
+  if (isNaN(validDate.getTime())) {
+    return 'Data inválida'
+  }
+  
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
-  }).format(date)
+  }).format(validDate)
 }
 
 export function getLeadStatusColor(status: string): string {
