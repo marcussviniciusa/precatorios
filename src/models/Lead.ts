@@ -38,8 +38,7 @@ const LeadSchema = new Schema<Lead>({
   timestamps: true
 })
 
-LeadSchema.index({ phone: 1 })
-LeadSchema.index({ whatsappId: 1 })
+// phone e whatsappId já têm unique: true no schema, não precisam de índices explícitos
 LeadSchema.index({ classification: 1 })
 LeadSchema.index({ status: 1 })
 LeadSchema.index({ createdAt: -1 })

@@ -119,9 +119,8 @@ export async function POST(
 
       const evolutionResult = await evolutionResponse.json()
 
-      // Salvar mensagem na conversa
+      // Salvar mensagem na conversa (deixar Mongoose gerar o _id automaticamente)
       const newMessage = {
-        _id: Date.now().toString(), // ID temporário
         conversationId: conversation._id,
         type: messageType,
         content: message || (isImage ? '[Imagem enviada]' : `[Documento: ${file.name}]`),
@@ -150,9 +149,20 @@ export async function POST(
         lastInteraction: new Date()
       })
 
+      // Obter a mensagem salva com o _id gerado
+      const savedMessage = conversation.messages[conversation.messages.length - 1]
+      
       return NextResponse.json({
         success: true,
-        message: newMessage
+        message: {
+          _id: savedMessage._id,
+          type: savedMessage.type,
+          content: savedMessage.content,
+          sender: savedMessage.sender,
+          senderName: savedMessage.senderName,
+          timestamp: savedMessage.timestamp,
+          metadata: savedMessage.metadata
+        }
       })
 
     } catch (evolutionError) {
