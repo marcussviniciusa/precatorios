@@ -61,7 +61,7 @@ const formatPhoneForDisplay = (phone?: string): string => {
 }
 
 export default function WhatsAppConnectionPage() {
-  const [instances, setInstances] = useState<Instance[]>([]
+  const [instances, setInstances] = useState<Instance[]>([])
   const [loading, setLoading] = useState(false)
   const [qrLoading, setQrLoading] = useState<string | null>(null)
   const [newInstanceName, setNewInstanceName] = useState('')
