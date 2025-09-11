@@ -39,7 +39,7 @@ export function getLeadStatusColor(status: string): string {
       return 'bg-yellow-100 text-yellow-800 border-yellow-200'
     case 'cold':
       return 'bg-blue-100 text-blue-800 border-blue-200'
-    case 'descarte':
+    case 'discard':
       return 'bg-gray-100 text-gray-800 border-gray-200'
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200'
@@ -57,9 +57,9 @@ export function calculateLeadScore(lead: any): number {
   return score
 }
 
-export function getLeadClassification(score: number): 'hot' | 'warm' | 'cold' | 'descarte' {
+export function getLeadClassification(score: number): 'hot' | 'warm' | 'cold' | 'discard' {
   if (score >= 80) return 'hot'
   if (score >= 50) return 'warm'
   if (score >= 20) return 'cold'
-  return 'descarte'
+  return 'discard'
 }

@@ -14,16 +14,18 @@ import {
   Mail,
   MoreVertical,
   Eye,
-  Edit
+  Edit,
+  Trash2
 } from 'lucide-react'
 import { formatCurrency, formatDate, getLeadStatusColor } from '@/lib/utils'
+import { getAuthHeaders } from '@/lib/client-auth'
 
 interface Lead {
   _id: string
   name: string
   phone: string
   email?: string
-  classification: 'hot' | 'warm' | 'cold' | 'descarte'
+  classification: 'hot' | 'warm' | 'cold' | 'discard'
   score: number
   status: 'new' | 'qualified' | 'in_analysis' | 'proposal' | 'closed_won' | 'closed_lost'
   precatorioValue?: number
@@ -42,6 +44,8 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [classificationFilter, setClassificationFilter] = useState<string>('all')
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, leadId: string, leadName: string }>({ show: false, leadId: '', leadName: '' })
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     async function fetchLeads() {
@@ -86,6 +90,41 @@ export default function LeadsPage() {
     setFilteredLeads(filtered)
   }, [leads, searchTerm, statusFilter, classificationFilter])
 
+  const handleDeleteClick = (leadId: string, leadName: string) => {
+    setDeleteConfirm({ show: true, leadId, leadName })
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirm({ show: false, leadId: '', leadName: '' })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm.leadId) return
+    
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/leads/${deleteConfirm.leadId}/delete`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      })
+
+      if (response.ok) {
+        // Remove o lead da lista
+        setLeads(prev => prev.filter(lead => lead._id !== deleteConfirm.leadId))
+        alert('Lead e todos os dados relacionados foram deletados com sucesso!')
+      } else {
+        const error = await response.json()
+        alert('Erro ao deletar lead: ' + error.error)
+      }
+    } catch (error) {
+      console.error('Error deleting lead:', error)
+      alert('Erro interno. Tente novamente.')
+    } finally {
+      setIsDeleting(false)
+      setDeleteConfirm({ show: false, leadId: '', leadName: '' })
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const configs: Record<string, { color: string; label: string }> = {
       new: { color: 'bg-blue-100 text-blue-800', label: 'Novo' },
@@ -109,7 +148,7 @@ export default function LeadsPage() {
       hot: { variant: 'hot', label: 'Quente' },
       warm: { variant: 'warm', label: 'Morno' },
       cold: { variant: 'cold', label: 'Frio' },
-      descarte: { variant: 'outline', label: 'Descarte' }
+      discard: { variant: 'outline', label: 'Descarte' }
     }
     
     const config = variants[classification] || variants.cold
@@ -180,7 +219,7 @@ export default function LeadsPage() {
                 <option value="hot">Quente</option>
                 <option value="warm">Morno</option>
                 <option value="cold">Frio</option>
-                <option value="descarte">Descarte</option>
+                <option value="discard">Descarte</option>
               </select>
             </div>
           </div>
@@ -295,6 +334,14 @@ export default function LeadsPage() {
                           <Button variant="ghost" size="sm">
                             <Phone className="w-4 h-4" />
                           </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDeleteClick(lead._id, lead.name)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -305,6 +352,47 @@ export default function LeadsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Confirmação para Delete */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Confirmar Exclusão
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Tem certeza que deseja deletar completamente o contato <strong>{deleteConfirm.leadName}</strong>? 
+              Esta ação irá remover:
+            </p>
+            <ul className="text-sm text-gray-600 mb-6 list-disc list-inside">
+              <li>Dados do lead</li>
+              <li>Todas as conversas</li>
+              <li>Histórico de mensagens</li>
+              <li>Atividades relacionadas</li>
+            </ul>
+            <p className="text-red-600 text-sm font-medium mb-6">
+              ⚠️ Esta ação não pode ser desfeita!
+            </p>
+            
+            <div className="flex justify-end space-x-3">
+              <Button 
+                variant="outline" 
+                onClick={handleDeleteCancel}
+                disabled={isDeleting}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deletando...' : 'Deletar Definitivamente'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -69,11 +69,10 @@ const WhatsAppInstanceSchema = new Schema<WhatsAppInstance>({
 })
 
 // Índices para performance
-WhatsAppInstanceSchema.index({ phoneNumber: 1 }, { unique: true, sparse: true })
 WhatsAppInstanceSchema.index({ instanceName: 1 })
 WhatsAppInstanceSchema.index({ state: 1 })
 WhatsAppInstanceSchema.index({ createdBy: 1 })
 WhatsAppInstanceSchema.index({ isActive: 1 })
-WhatsAppInstanceSchema.index({ phoneNumber: 1, isActive: 1 })
+WhatsAppInstanceSchema.index({ phoneNumber: 1, isActive: 1 }, { unique: true, sparse: true })
 
 export default models.WhatsAppInstance || model<WhatsAppInstance>('WhatsAppInstance', WhatsAppInstanceSchema)

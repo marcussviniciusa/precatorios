@@ -214,7 +214,7 @@ interface ConversationListItem {
   lastMessage: string
   lastMessageTime: Date
   unreadCount: number
-  classification: 'hot' | 'warm' | 'cold' | 'descarte'
+  classification: 'hot' | 'warm' | 'cold' | 'discard'
   assignedAgent?: string
 }
 
@@ -607,7 +607,7 @@ export default function ConversationsPage() {
       hot: { variant: 'hot', label: 'Quente' },
       warm: { variant: 'warm', label: 'Morno' },
       cold: { variant: 'cold', label: 'Frio' },
-      descarte: { variant: 'outline', label: 'Descarte' }
+      discard: { variant: 'outline', label: 'Descarte' }
     }
     
     const config = variants[classification] || variants.cold

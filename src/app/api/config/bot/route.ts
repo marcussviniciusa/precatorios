@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     // Validate aiConfig if provided
     if (configData.aiConfig) {
-      const aiRequiredFields = ['enabled', 'provider', 'model', 'prompts', 'settings']
+      const aiRequiredFields = ['enabled', 'provider', 'prompts', 'settings']
       for (const field of aiRequiredFields) {
         if (!(field in configData.aiConfig) || configData.aiConfig[field] === undefined || configData.aiConfig[field] === null) {
           console.log(`Missing required AI field: aiConfig.${field}`)

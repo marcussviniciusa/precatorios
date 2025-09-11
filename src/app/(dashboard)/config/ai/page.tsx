@@ -35,6 +35,7 @@ export default function AIConfigPage() {
       }
 
       const data = await response.json()
+      console.log('Config loaded:', data.aiConfig)
       setConfig(data)
     } catch (error) {
       setMessage({ type: 'error', text: 'Erro ao carregar configurações' })
@@ -75,9 +76,11 @@ export default function AIConfigPage() {
     setConfig({
       ...config,
       aiConfig: {
+        enabled: false,
+        provider: 'openrouter',
         ...config.aiConfig,
         [field]: value
-      }
+      } as any
     })
   }
 
@@ -87,12 +90,18 @@ export default function AIConfigPage() {
     setConfig({
       ...config,
       aiConfig: {
+        enabled: false,
+        provider: 'openrouter',
         ...config.aiConfig,
         prompts: {
+          extraction: '',
+          scoring: '',
+          response: '',
+          transfer: '',
           ...config.aiConfig?.prompts,
           [promptType]: value
         }
-      }
+      } as any
     })
   }
 
@@ -102,12 +111,19 @@ export default function AIConfigPage() {
     setConfig({
       ...config,
       aiConfig: {
+        enabled: false,
+        provider: 'openrouter',
         ...config.aiConfig,
         settings: {
+          autoExtraction: true,
+          autoScoring: true,
+          autoTransfer: true,
+          temperature: 0.3,
+          maxTokens: 500,
           ...config.aiConfig?.settings,
           [setting]: value
         }
-      }
+      } as any
     })
   }
 

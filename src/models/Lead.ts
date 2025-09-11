@@ -13,7 +13,7 @@ const LeadSchema = new Schema<Lead>({
   },
   classification: {
     type: String,
-    enum: ['hot', 'warm', 'cold', 'descarte'],
+    enum: ['hot', 'warm', 'cold', 'discard'],
     required: true
   },
   score: { type: Number, default: 0, min: 0, max: 100 },

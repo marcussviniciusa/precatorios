@@ -35,7 +35,7 @@ The system's core functionality revolves around automatic lead scoring and class
   - Hot (80-100pts): Immediate analysis
   - Warm (50-79pts): Human follow-up
   - Cold (20-49pts): Educational nurturing
-  - Descarte (0-19pts): Basic information only
+  - Discard (0-19pts): Basic information only
 
 ### WhatsApp Integration Flow
 1. **Instance Connection** (`/api/evolution/connect/[instance]`): Generates QR code and extracts phone number
@@ -104,6 +104,59 @@ The system uses Evolution API for WhatsApp integration:
 - **Required Events**: `MESSAGES_UPSERT`, `CONNECTION_UPDATE`, `APPLICATION_STARTUP`, `QRCODE_UPDATED`
 - **Auto-Response Logic**: Webhook processes messages and calculates lead scores
 - **Bot Configuration**: Controls response templates and transfer rules
+- **Message Management**: Mark messages as read to prevent Evolution API retries
+
+### Evolution API Troubleshooting
+When deleting leads but still receiving webhook messages:
+```bash
+# Mark specific message as read to stop retries
+curl -X POST "${EVOLUTION_API_URL}/chat/markMessageAsRead/INSTANCE_NAME" \
+  -H "apikey: ${EVOLUTION_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "readMessages": [
+      {
+        "remoteJid": "PHONE_NUMBER@s.whatsapp.net",
+        "fromMe": false,
+        "id": "MESSAGE_ID"
+      }
+    ]
+  }'
+```
+
+## AI Integration System
+
+The system includes a complete AI integration for intelligent lead processing using OpenRouter API:
+
+### AI Configuration (`/config/ai`)
+- **Provider**: OpenRouter (supports multiple LLM models)
+- **Dual Model Architecture**:
+  - `analysisModel`: For extraction, scoring, and transfer decisions
+  - `responseModel`: For customer conversation (can be faster/cheaper)
+- **Custom Prompts**: Fully customizable prompts for each AI function
+- **Toggle Controls**: Enable/disable specific AI features
+
+### AI Service (`src/lib/ai-service.ts`)
+The `PrecatoriosAI` class provides specialized methods:
+- **`extractLeadInfo()`**: Extracts lead data from messages (name, phone, precatório value, state, urgency)
+- **`calculateScore()`**: Calculates lead score 0-100 and classification (hot/warm/cold/discard)
+- **`shouldTransfer()`**: Decides when to transfer to human agents
+- **`generateResponse()`**: Creates contextual responses for customers
+
+### AI Workflow in Webhook
+1. **Message Reception**: WhatsApp message received via webhook
+2. **Information Extraction**: AI extracts structured data from message
+3. **Lead Scoring**: AI calculates score and updates classification
+4. **Transfer Decision**: AI determines if human intervention needed
+5. **Response Generation**: AI creates appropriate response
+6. **Message Sending**: Response sent via Evolution API
+
+### AI Configuration Options
+- **Auto-Extraction**: Automatically extract lead information
+- **Auto-Scoring**: Automatically calculate and update lead scores
+- **Auto-Transfer**: Automatically decide when to transfer to humans
+- **Temperature**: Control response creativity (0.1-1.0)
+- **Max Tokens**: Limit response length (50-2000 tokens)
 
 ## Real-time WebSocket System
 
@@ -185,6 +238,32 @@ Contextual responses based on:
 - Conversion funnel visualization
 - Performance metrics calculation
 
+## Lead Management System
+
+### Lead Deletion (`/api/leads/[leadId]/delete`)
+Complete lead deletion system that removes all associated data:
+- **Lead record**: Primary lead information
+- **All conversations**: Complete chat history
+- **All activities**: CRM tasks and interactions
+- **Message history**: All WhatsApp messages
+- **Secure deletion**: Requires authentication and confirmation
+
+### Lead Management UI (`/leads`)
+- **Delete button**: Red trash icon with hover effects
+- **Confirmation modal**: Double-confirmation with detailed warning
+- **Batch operations**: Multiple lead selection for bulk actions
+- **Real-time updates**: Automatic list refresh after operations
+- **Search and filters**: Advanced filtering by classification, status, etc.
+
+### Lead Classification System
+All lead classifications use consistent English terms:
+- **`'hot'`**: High-value, immediate attention leads
+- **`'warm'`**: Qualified leads needing follow-up  
+- **`'cold'`**: Low-priority leads for nurturing
+- **`'discard'`**: Unqualified leads for basic info only
+
+**IMPORTANT**: Always use English classification terms (`'discard'` not `'descarte'`) to maintain database consistency.
+
 ## Database Considerations
 
 MongoDB schemas use string references instead of ObjectId for TypeScript compatibility. The system includes proper indexing for:
@@ -214,3 +293,46 @@ The system includes mock data fallbacks for development and can be tested locall
 - **Socket.IO**: Real-time WebSocket communication (`socket.io`, `socket.io-client`)
 - **WebSocket Server**: Must be initialized before webhook events for proper message broadcasting
 - **Client Connection**: Browsers automatically connect to WebSocket server on conversation page load
+
+## Troubleshooting Guide
+
+### Common Issues and Solutions
+
+#### 1. Webhook Receiving Messages from Deleted Leads
+**Problem**: After deleting a lead, Evolution API continues sending webhook messages.
+**Solution**: Mark the specific message as read using Evolution API:
+```bash
+curl -X POST "${EVOLUTION_API_URL}/chat/markMessageAsRead/INSTANCE_NAME" \
+  -H "apikey: ${EVOLUTION_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"readMessages": [{"remoteJid": "PHONE@s.whatsapp.net", "fromMe": false, "id": "MESSAGE_ID"}]}'
+```
+
+#### 2. Classification Validation Errors
+**Problem**: `ValidationError: 'descarte' is not a valid enum value`
+**Solution**: Always use English terms (`'discard'` not `'descarte'`). Update existing records:
+- Check database for leads with old classification terms
+- Update via direct database query or API endpoints
+- Ensure all UI components use consistent English terms
+
+#### 3. AI Not Responding to Messages
+**Common causes**:
+- IA disabled in `/config/ai`
+- Outside working hours (configurable in bot settings)
+- Missing API key or incorrect model names
+- Lead transferred automatically (check transfer rules)
+- Bot reached maximum response limit per conversation
+
+#### 4. WebSocket Connection Issues  
+**Problem**: Messages not appearing in real-time
+**Solutions**:
+- Initialize WebSocket server: `curl http://localhost:3000/api/socketio`
+- Check browser console for connection errors
+- Verify WebSocket server is running before sending webhooks
+
+#### 5. Database Connection Problems
+**Common issues**:
+- MongoDB URI format incorrect
+- Network connectivity to database server
+- Authentication credentials expired
+- Database connection pool exhausted (restart server)

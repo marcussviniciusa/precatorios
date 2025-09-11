@@ -18,7 +18,7 @@ export interface Lead {
   email?: string
   whatsappId: string
   status: 'new' | 'qualified' | 'in_analysis' | 'proposal' | 'closed_won' | 'closed_lost'
-  classification: 'hot' | 'warm' | 'cold' | 'descarte'
+  classification: 'hot' | 'warm' | 'cold' | 'discard'
   score: number
   hasPrecatorio?: boolean
   precatorioValue?: number
