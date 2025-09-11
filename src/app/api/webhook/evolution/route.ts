@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Lead from '@/models/Lead'
 import Conversation from '@/models/Conversation'
+import BotConfig from '@/models/BotConfig'
 import { calculateLeadScore, getLeadClassification } from '@/lib/utils'
 import { broadcastNewMessage, broadcastConversationUpdated } from '@/lib/websocket'
 import { uploadBufferToMinio } from '@/lib/minio'
@@ -259,17 +260,50 @@ async function processMessageForQualification(
 }
 
 async function sendAutomaticResponse(lead: any, conversation: any, userMessage: string, instanceName: string) {
-  // Não usar o evolutionAPI da lib, usar fetch direto com a instância correta
+  // Verificar se o bot está ativo na configuração
+  const config = await BotConfig.findOne().sort({ updatedAt: -1 })
+  
+  if (!config || !config.isActive) {
+    console.log('Bot is disabled, skipping automatic response')
+    return
+  }
+  
+  // Verificar horário de funcionamento
+  const now = new Date()
+  const currentHour = now.getHours()
+  const currentMinute = now.getMinutes()
+  const currentTime = currentHour * 100 + currentMinute
+  
+  const startTime = parseInt(config.workingHours.start.replace(':', ''))
+  const endTime = parseInt(config.workingHours.end.replace(':', ''))
+  
+  if (currentTime < startTime || currentTime > endTime) {
+    console.log(`Bot is outside working hours (${config.workingHours.start}-${config.workingHours.end}), skipping response`)
+    return
+  }
+
+  // Verificar limite de respostas do bot
+  const botMessagesCount = conversation.messages.filter((msg: any) => msg.sender === 'bot').length
+  if (botMessagesCount >= config.transferRules.maxBotResponses) {
+    console.log(`Bot reached max responses limit (${config.transferRules.maxBotResponses}), transferring to human`)
+    
+    // Marcar para transferência por limite de mensagens
+    await Conversation.findByIdAndUpdate(conversation._id, {
+      status: 'transferred',
+      'metadata.transferReason': 'Limite de mensagens do bot atingido'
+    })
+    return
+  }
   
   let response = ''
   const lowerMessage = userMessage.toLowerCase()
 
   if (lowerMessage.includes('oi') || lowerMessage.includes('olá') || lowerMessage.includes('bom dia')) {
-    response = `Olá ${lead.name}! 👋\n\nSou o assistente virtual especializado em precatórios. Como posso ajudá-lo hoje?`
+    response = config.prompts.welcome.replace('{nome}', lead.name)
   } else if (lead.hasPrecatorio && !lead.isEligible) {
-    response = 'Para melhor atendê-lo, preciso de algumas informações:\n\n1️⃣ Qual o valor do seu precatório?\n2️⃣ Qual estado/município emitiu?\n3️⃣ Já tem o ofício requisitório em mãos?'
-  } else if (lead.score >= 80) {
-    response = '🔥 Ótima notícia! Seu precatório está dentro dos nossos critérios de atendimento.\n\nVou transferir você para um especialista que vai explicar como podemos acelerar o recebimento do seu precatório.\n\nAguarde um momento...'
+    response = config.prompts.qualification
+  } else if (lead.score >= config.transferRules.scoreThreshold) {
+    response = config.prompts.transfer
     
     // Marcar para transferência humana
     await Conversation.findByIdAndUpdate(conversation._id, {
@@ -277,9 +311,24 @@ async function sendAutomaticResponse(lead: any, conversation: any, userMessage: 
       'metadata.transferReason': 'Lead quente - qualificação automática'
     })
   } else if (lowerMessage.includes('precatório') || lowerMessage.includes('precatorio')) {
-    response = 'Entendi que você tem interesse em precatórios! 📋\n\nPara verificar se podemos ajudá-lo, preciso saber:\n\n• Qual o valor aproximado?\n• De qual estado/município?\n• Há quanto tempo está aguardando?'
+    response = config.prompts.qualification
   } else {
-    response = 'Obrigado pela mensagem! 😊\n\nSou especialista em acelerar o recebimento de precatórios. Se você tem algum precatório para receber, posso ajudá-lo a receber mais rapidamente.\n\nConte-me mais sobre sua situação!'
+    response = config.prompts.welcome
+  }
+
+  // Verificar se deve transferir por palavras-chave
+  const keywordTriggered = config.transferRules.keywordTriggers.some(keyword => 
+    lowerMessage.includes(keyword.toLowerCase())
+  )
+  
+  if (keywordTriggered) {
+    response = config.prompts.transfer
+    
+    // Marcar para transferência humana
+    await Conversation.findByIdAndUpdate(conversation._id, {
+      status: 'transferred',
+      'metadata.transferReason': 'Palavra-chave trigger'
+    })
   }
 
   try {
