@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Conversation from '@/models/Conversation'
 import Lead from '@/models/Lead'
+import { uploadFileToMinio } from '@/lib/minio'
+import { broadcastNewMessage } from '@/lib/websocket'
 
 export async function POST(
   request: NextRequest,
@@ -47,7 +49,21 @@ export async function POST(
       const isImage = file.type.startsWith('image/')
       const messageType = isImage ? 'image' : 'document'
       
-      // Tentar primeiro com FormData (método mais compatível)
+      // 1. Salvar arquivo no MinIO primeiro
+      let minioUrl: string
+      try {
+        const folder = isImage ? 'images' : 'documents'
+        minioUrl = await uploadFileToMinio(file, file.name, folder)
+        console.log(`File saved to MinIO: ${minioUrl}`)
+      } catch (minioError) {
+        console.error('Error saving file to MinIO:', minioError)
+        return NextResponse.json(
+          { error: 'Erro ao salvar arquivo no servidor' },
+          { status: 500 }
+        )
+      }
+      
+      // 2. Tentar primeiro com FormData (método mais compatível)
       const evolutionFormData = new FormData()
       evolutionFormData.append('attachment', file)
       evolutionFormData.append('number', lead.phone)
@@ -130,8 +146,9 @@ export async function POST(
         metadata: {
           messageId: evolutionResult.key?.id,
           fileName: file.name,
-          mimetype: file.type
-          // Não salvar mediaUrl para não ocupar muito espaço no banco
+          mimetype: file.type,
+          mediaUrl: minioUrl, // URL do arquivo no MinIO
+          fileSize: file.size
         }
       }
 
@@ -143,6 +160,9 @@ export async function POST(
       }
 
       await conversation.save()
+
+      // Broadcast da mensagem do agente via WebSocket
+      broadcastNewMessage(conversation._id.toString(), newMessage)
 
       // Atualizar última interação do lead
       await Lead.findByIdAndUpdate(lead._id, {

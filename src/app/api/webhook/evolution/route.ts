@@ -4,6 +4,7 @@ import Lead from '@/models/Lead'
 import Conversation from '@/models/Conversation'
 import { calculateLeadScore, getLeadClassification } from '@/lib/utils'
 import { broadcastNewMessage, broadcastConversationUpdated } from '@/lib/websocket'
+import { uploadBufferToMinio } from '@/lib/minio'
 
 export async function POST(request: NextRequest) {
   try {
@@ -92,6 +93,46 @@ export async function POST(request: NextRequest) {
           })
         }
 
+        // Extrair URL de mídia do WhatsApp se disponível
+        const whatsappMediaUrl = message.message?.imageMessage?.url || 
+                                 message.message?.documentMessage?.url || 
+                                 message.message?.videoMessage?.url ||
+                                 message.message?.audioMessage?.url
+
+        const fileName = message.message?.documentMessage?.fileName ||
+                        message.message?.imageMessage?.fileName ||
+                        message.message?.videoMessage?.fileName ||
+                        'media-file'
+
+        const mimetype = message.message?.documentMessage?.mimetype ||
+                        message.message?.imageMessage?.mimetype ||
+                        message.message?.videoMessage?.mimetype ||
+                        message.message?.audioMessage?.mimetype
+
+        let minioUrl: string | undefined
+
+        // Se há URL de mídia, tentar baixar e salvar no MinIO
+        if (whatsappMediaUrl) {
+          try {
+            console.log(`Attempting to download media from: ${whatsappMediaUrl}`)
+            
+            const mediaResponse = await fetch(whatsappMediaUrl)
+            if (mediaResponse.ok) {
+              const mediaBuffer = Buffer.from(await mediaResponse.arrayBuffer())
+              const folder = messageType === 'image' ? 'images' : 
+                           messageType === 'audio' ? 'audio' :
+                           messageType === 'video' ? 'videos' : 'documents'
+              
+              minioUrl = await uploadBufferToMinio(mediaBuffer, fileName, mimetype || 'application/octet-stream', folder)
+              console.log(`Media saved to MinIO: ${minioUrl}`)
+            } else {
+              console.log(`Failed to download media: ${mediaResponse.status} ${mediaResponse.statusText}`)
+            }
+          } catch (error) {
+            console.error('Error downloading/saving media to MinIO:', error)
+          }
+        }
+
         // Criar objeto da mensagem
         const newMessage = {
           conversationId: conversation._id,
@@ -103,17 +144,9 @@ export async function POST(request: NextRequest) {
           read: false,
           metadata: {
             messageId: message.key.id,
-            mediaUrl: message.message?.imageMessage?.url || 
-                      message.message?.documentMessage?.url || 
-                      message.message?.videoMessage?.url ||
-                      message.message?.audioMessage?.url,
-            fileName: message.message?.documentMessage?.fileName ||
-                      message.message?.imageMessage?.fileName ||
-                      message.message?.videoMessage?.fileName,
-            mimetype: message.message?.documentMessage?.mimetype ||
-                      message.message?.imageMessage?.mimetype ||
-                      message.message?.videoMessage?.mimetype ||
-                      message.message?.audioMessage?.mimetype
+            mediaUrl: minioUrl || whatsappMediaUrl, // Priorizar MinIO, fallback para WhatsApp
+            fileName,
+            mimetype
           }
         }
 
