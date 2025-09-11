@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { getAuthHeaders } from '@/lib/client-auth'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { 
@@ -69,6 +70,28 @@ export default function ConfigPage() {
 
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const response = await fetch('/api/config/bot', {
+          headers: getAuthHeaders()
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          setConfig(data)
+        }
+      } catch (error) {
+        console.error('Error loading config:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadConfig()
+  }, [])
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -77,9 +100,7 @@ export default function ConfigPage() {
     try {
       const response = await fetch('/api/config/bot', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(config),
       })
 
@@ -138,6 +159,17 @@ export default function ConfigPage() {
     'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 
     'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ]
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-gray-600">Carregando configurações...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

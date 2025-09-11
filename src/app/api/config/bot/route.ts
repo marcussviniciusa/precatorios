@@ -71,16 +71,34 @@ export async function POST(request: NextRequest) {
     }
 
     const configData = await request.json()
+    console.log('Config data received:', JSON.stringify(configData, null, 2))
 
-    // Validate required fields
+    // Validate required fields (responseTemplates é opcional com defaults)
     const requiredFields = ['isActive', 'workingHours', 'prompts', 'eligibilityRules', 'transferRules']
     for (const field of requiredFields) {
-      if (!configData[field]) {
+      // Use hasOwnProperty or 'in' operator instead of truthy check for boolean fields
+      if (!(field in configData) || configData[field] === undefined || configData[field] === null) {
+        console.log(`Missing required field: ${field}`)
+        console.log(`Available fields:`, Object.keys(configData))
+        console.log(`Field value:`, configData[field])
         return NextResponse.json(
           { error: `Campo obrigatório: ${field}` },
           { status: 400 }
         )
       }
+    }
+
+    // Add default responseTemplates if not provided
+    const configWithDefaults = {
+      ...configData,
+      responseTemplates: configData.responseTemplates || {
+        greeting: 'Olá! Como posso ajudá-lo com seus precatórios?',
+        not_eligible: 'Infelizmente seu precatório não se enquadra em nossos critérios no momento.',
+        eligible: 'Ótima notícia! Seu precatório está dentro de nossos critérios de atendimento.',
+        need_documents: 'Para prosseguir, precisarei que envie alguns documentos.',
+        outside_hours: 'Nosso atendimento funciona das 8h às 18h. Retornarei seu contato no próximo horário comercial.'
+      },
+      updatedBy: payload.userId
     }
 
     // Find existing config or create new one
@@ -90,18 +108,12 @@ export async function POST(request: NextRequest) {
       // Update existing config
       config = await BotConfig.findOneAndUpdate(
         {},
-        {
-          ...configData,
-          updatedBy: payload.userId
-        },
+        configWithDefaults,
         { new: true }
       )
     } else {
       // Create new config
-      config = await BotConfig.create({
-        ...configData,
-        updatedBy: payload.userId
-      })
+      config = await BotConfig.create(configWithDefaults)
     }
 
     return NextResponse.json({
