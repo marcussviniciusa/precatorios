@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Conversation from '@/models/Conversation'
 import Lead from '@/models/Lead'
+import { broadcastNewMessage } from '@/lib/websocket'
 
 export async function POST(
   request: NextRequest,
@@ -56,8 +57,8 @@ export async function POST(
         )
       }
 
-      // Salvar mensagem na conversa
-      conversation.messages.push({
+      // Criar objeto da mensagem do agente
+      const agentMessage = {
         conversationId: conversation._id,
         type: 'text',
         content: message,
@@ -67,7 +68,10 @@ export async function POST(
         metadata: {
           messageId: evolutionResponse.key?.id
         }
-      })
+      }
+
+      // Salvar mensagem na conversa
+      conversation.messages.push(agentMessage)
 
       // Atualizar status da conversa se estava pausada
       if (conversation.status === 'paused') {
@@ -75,6 +79,9 @@ export async function POST(
       }
 
       await conversation.save()
+
+      // Broadcast da mensagem do agente via WebSocket
+      broadcastNewMessage(conversation._id.toString(), agentMessage)
 
       // Atualizar última interação do lead
       await Lead.findByIdAndUpdate(lead._id, {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -21,6 +21,7 @@ import {
   Trash2
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { useWebSocket } from '@/hooks/useWebSocket'
 
 interface ConversationListItem {
   _id: string
@@ -42,6 +43,12 @@ interface ConversationMessage {
   senderName?: string
   timestamp: Date
   read?: boolean
+  metadata?: {
+    messageId?: string
+    mediaUrl?: string
+    fileName?: string
+    mimetype?: string
+  }
 }
 
 interface ConversationDetails {
@@ -74,6 +81,52 @@ export default function ConversationsPage() {
   const [instanceError, setInstanceError] = useState<string | null>(null)
   const [deletingConversation, setDeletingConversation] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Stable callback functions
+  const handleNewMessage = useCallback((data: { conversationId: string; message: any }) => {
+    // Update conversation details if it's the currently selected conversation
+    if (selectedConversation === data.conversationId && conversationDetails) {
+      setConversationDetails(prev => prev ? {
+        ...prev,
+        messages: [...prev.messages, data.message]
+      } : null)
+    }
+  }, [selectedConversation, conversationDetails])
+
+  const handleConversationUpdated = useCallback((data: { conversationId: string; lastMessage?: string; lastMessageTime?: Date }) => {
+    // Update the conversation in the list
+    setConversations(prev => prev.map(conv => {
+      if (conv._id === data.conversationId) {
+        return {
+          ...conv,
+          lastMessage: data.lastMessage || conv.lastMessage,
+          lastMessageTime: data.lastMessageTime ? new Date(data.lastMessageTime) : conv.lastMessageTime,
+          unreadCount: selectedConversation === data.conversationId ? 0 : conv.unreadCount + 1
+        }
+      }
+      return conv
+    }))
+  }, [selectedConversation])
+
+  const handleConversationDeleted = useCallback((data: { conversationId: string }) => {
+    // Remove conversation from list
+    setConversations(prev => prev.filter(conv => conv._id !== data.conversationId))
+    
+    // Clear selection if it was the deleted conversation
+    if (selectedConversation === data.conversationId) {
+      setSelectedConversation(null)
+      setConversationDetails(null)
+      setInstanceInfo(null)
+      setInstanceError(null)
+    }
+  }, [selectedConversation])
+
+  // WebSocket hook for real-time updates
+  const { isConnected, joinConversation, leaveConversation } = useWebSocket({
+    onNewMessage: handleNewMessage,
+    onConversationUpdated: handleConversationUpdated,
+    onConversationDeleted: handleConversationDeleted
+  })
 
   useEffect(() => {
     async function fetchConversations() {
@@ -213,7 +266,11 @@ export default function ConversationsPage() {
           setSelectedFile(null)
           
           // Atualizar lista de conversas
-          fetchConversations()
+          const conversationsResponse = await fetch('/api/conversations')
+          if (conversationsResponse.ok) {
+            const conversationsData = await conversationsResponse.json()
+            setConversations(conversationsData)
+          }
         }
       } else {
         // Enviar mensagem de texto normal
@@ -240,7 +297,11 @@ export default function ConversationsPage() {
           setNewMessage('')
           
           // Atualizar lista de conversas
-          fetchConversations()
+          const conversationsResponse2 = await fetch('/api/conversations')
+          if (conversationsResponse2.ok) {
+            const conversationsData = await conversationsResponse2.json()
+            setConversations(conversationsData)
+          }
         }
       }
     } catch (error) {
@@ -252,8 +313,16 @@ export default function ConversationsPage() {
 
   // Lidar com seleção de conversa
   const handleConversationSelect = (conversationId: string) => {
+    // Leave previous conversation room
+    if (selectedConversation) {
+      leaveConversation(selectedConversation)
+    }
+    
     setSelectedConversation(conversationId)
     fetchConversationMessages(conversationId)
+    
+    // Join new conversation room for real-time updates
+    joinConversation(conversationId)
   }
 
   // Função para excluir conversa
@@ -333,7 +402,14 @@ export default function ConversationsPage() {
     <div className="h-[calc(100vh-8rem)] flex flex-col">
       <div className="flex-shrink-0 flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Conversas</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 flex items-center space-x-2">
+            <span>Conversas</span>
+            {isConnected ? (
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Conectado em tempo real" />
+            ) : (
+              <div className="w-2 h-2 bg-red-500 rounded-full" title="Desconectado do tempo real" />
+            )}
+          </h1>
           <p className="text-gray-600">Gerencie todas as conversas do WhatsApp</p>
         </div>
         <div className="flex space-x-2">
@@ -478,9 +554,9 @@ export default function ConversationsPage() {
                             )}
                           </span>
                           {instanceInfo.isMatched ? (
-                            <CheckCircle className="w-3 h-3 text-green-500" title="Instância correspondente ao número" />
+                            <CheckCircle className="w-3 h-3 text-green-500" />
                           ) : (
-                            <AlertTriangle className="w-3 h-3 text-yellow-500" title="Usando instância alternativa" />
+                            <AlertTriangle className="w-3 h-3 text-yellow-500" />
                           )}
                         </div>
                       ) : instanceError ? (
@@ -545,7 +621,7 @@ export default function ConversationsPage() {
                                 src={message.metadata.mediaUrl} 
                                 alt="Imagem enviada" 
                                 className="rounded-lg max-w-full h-auto cursor-pointer"
-                                onClick={() => window.open(message.metadata.mediaUrl, '_blank')}
+                                onClick={() => message.metadata?.mediaUrl && window.open(message.metadata.mediaUrl, '_blank')}
                               />
                               {message.content !== '[Imagem enviada]' && (
                                 <p className="text-sm">{message.content}</p>
@@ -567,9 +643,9 @@ export default function ConversationsPage() {
                                     Documento PDF
                                   </p>
                                 </div>
-                                {message.metadata?.mediaUrl && (
+                                {message.metadata && message.metadata.mediaUrl && (
                                   <button
-                                    onClick={() => window.open(message.metadata.mediaUrl, '_blank')}
+                                    onClick={() => message.metadata?.mediaUrl && window.open(message.metadata.mediaUrl, '_blank')}
                                     className="text-blue-500 hover:text-blue-700 text-xs"
                                   >
                                     Abrir
@@ -588,7 +664,7 @@ export default function ConversationsPage() {
                                     Áudio enviado
                                   </p>
                                 </div>
-                                {message.metadata?.mediaUrl && (
+                                {message.metadata && message.metadata.mediaUrl && (
                                   <audio controls className="h-8">
                                     <source src={message.metadata.mediaUrl} type="audio/ogg" />
                                     <source src={message.metadata.mediaUrl} type="audio/mpeg" />
@@ -729,7 +805,7 @@ export default function ConversationsPage() {
                       placeholder="Digite sua mensagem..."
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
                       disabled={sendingMessage}
                       className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
                     />

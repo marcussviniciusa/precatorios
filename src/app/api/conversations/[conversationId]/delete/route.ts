@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Conversation from '@/models/Conversation'
 import Lead from '@/models/Lead'
+import { broadcastConversationDeleted } from '@/lib/websocket'
 
 export async function DELETE(
   request: NextRequest,
@@ -30,6 +31,9 @@ export async function DELETE(
     await Lead.findByIdAndUpdate(conversation.leadId, {
       lastInteraction: new Date() // Atualiza para mostrar quando foi excluída
     })
+
+    // Broadcast da exclusão via WebSocket
+    broadcastConversationDeleted(conversationId)
 
     return NextResponse.json({
       success: true,

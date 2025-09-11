@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb'
 import Lead from '@/models/Lead'
 import Conversation from '@/models/Conversation'
 import { calculateLeadScore, getLeadClassification } from '@/lib/utils'
+import { broadcastNewMessage, broadcastConversationUpdated } from '@/lib/websocket'
 
 export async function POST(request: NextRequest) {
   try {
@@ -91,8 +92,8 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // Adicionar mensagem à conversa
-        conversation.messages.push({
+        // Criar objeto da mensagem
+        const newMessage = {
           conversationId: conversation._id,
           type: messageType,
           content: messageText,
@@ -112,9 +113,14 @@ export async function POST(request: NextRequest) {
                       message.message?.imageMessage?.mimetype ||
                       message.message?.videoMessage?.mimetype
           }
-        })
+        }
 
+        // Adicionar mensagem à conversa
+        conversation.messages.push(newMessage)
         await conversation.save()
+
+        // Broadcast da nova mensagem via WebSocket
+        broadcastNewMessage(conversation._id.toString(), newMessage)
 
         // Atualizar última interação do lead
         lead.lastInteraction = new Date()
@@ -239,17 +245,23 @@ async function sendAutomaticResponse(lead: any, conversation: any, userMessage: 
       return
     }
     
-    // Salvar resposta do bot na conversa
-    conversation.messages.push({
+    // Criar objeto da mensagem do bot
+    const botMessage = {
       conversationId: conversation._id,
       type: 'text',
       content: response,
       sender: 'bot',
       timestamp: new Date(),
       read: true
-    })
-    
+    }
+
+    // Salvar resposta do bot na conversa
+    conversation.messages.push(botMessage)
     await conversation.save()
+
+    // Broadcast da mensagem do bot via WebSocket
+    broadcastNewMessage(conversation._id.toString(), botMessage)
+    
     console.log(`Bot response sent to ${lead.phone}: "${response}"`)
   } catch (error) {
     console.error('Error sending automatic response:', error)
