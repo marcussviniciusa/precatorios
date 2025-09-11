@@ -16,13 +16,16 @@ export async function GET(request: NextRequest) {
       instanceName: instance.instanceName,
       state: instance.state,
       status: instance.state,
+      phoneNumber: instance.phoneNumber,
       ownerJid: instance.ownerJid,
       profileName: instance.profileName,
       profilePicUrl: instance.profilePicUrl,
       integration: instance.integration,
       token: instance.token,
       createdAt: instance.createdAt,
-      updatedAt: instance.updatedAt
+      updatedAt: instance.updatedAt,
+      lastConnectionAt: instance.lastConnectionAt,
+      connectionHistory: instance.connectionHistory
     }))
 
     return NextResponse.json({

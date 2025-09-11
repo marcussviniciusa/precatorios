@@ -18,13 +18,15 @@ import {
   Plus,
   CheckCircle,
   AlertCircle,
-  Clock
+  Clock,
+  Phone
 } from 'lucide-react'
 
 interface Instance {
   instanceName: string
   state?: string
   status?: string
+  phoneNumber?: string
   qrcode?: string
   pairingCode?: string
   ownerJid?: string
@@ -34,10 +36,32 @@ interface Instance {
   token?: string
   createdAt?: string
   updatedAt?: string
+  lastConnectionAt?: string
+  connectionHistory?: { instanceName: string; connectedAt: string }[]
+}
+
+// Função para formatar número de telefone para exibição
+const formatPhoneForDisplay = (phone?: string): string => {
+  if (!phone) return 'Não conectado'
+  
+  // Formato brasileiro: +55 (84) 99999-9999
+  if (phone.startsWith('55') && phone.length >= 12) {
+    const ddd = phone.substring(2, 4)
+    const number = phone.substring(4)
+    
+    if (number.length === 9) {
+      return `+55 (${ddd}) ${number.substring(0, 5)}-${number.substring(5)}`
+    } else if (number.length === 8) {
+      return `+55 (${ddd}) ${number.substring(0, 4)}-${number.substring(4)}`
+    }
+  }
+  
+  // Fallback: formato internacional simples
+  return `+${phone}`
 }
 
 export default function WhatsAppConnectionPage() {
-  const [instances, setInstances] = useState<Instance[]>([])
+  const [instances, setInstances] = useState<Instance[]>([]
   const [loading, setLoading] = useState(false)
   const [qrLoading, setQrLoading] = useState<string | null>(null)
   const [newInstanceName, setNewInstanceName] = useState('')
@@ -372,10 +396,16 @@ export default function WhatsAppConnectionPage() {
                   ) : (
                     <Smartphone className="w-5 h-5" />
                   )}
-                  <div>
-                    <div>{instance.instanceName}</div>
+                  <div className="flex-1">
+                    <div className="font-semibold">{instance.instanceName}</div>
+                    {instance.phoneNumber && (
+                      <div className="text-sm font-normal text-muted-foreground flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        {formatPhoneForDisplay(instance.phoneNumber)}
+                      </div>
+                    )}
                     {instance.profileName && (
-                      <div className="text-sm font-normal text-muted-foreground">
+                      <div className="text-xs font-normal text-muted-foreground">
                         {instance.profileName}
                       </div>
                     )}
@@ -390,9 +420,9 @@ export default function WhatsAppConnectionPage() {
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {getStatusBadge(instance)}
-                {instance.ownerJid && (
+                {!instance.phoneNumber && instance.ownerJid && (
                   <Badge variant="outline" className="text-xs">
                     {instance.ownerJid.split('@')[0]}
                   </Badge>
@@ -401,6 +431,21 @@ export default function WhatsAppConnectionPage() {
             </CardHeader>
 
             <CardContent className="space-y-4">
+              {/* Histórico de Conexões */}
+              {instance.connectionHistory && instance.connectionHistory.length > 1 && (
+                <div className="text-xs text-muted-foreground bg-blue-50 p-2 rounded">
+                  <div className="font-medium mb-1">Instância reutilizada:</div>
+                  <div className="space-y-1">
+                    {instance.connectionHistory.slice(-3).map((conn, idx) => (
+                      <div key={idx} className="flex justify-between">
+                        <span>{conn.instanceName}</span>
+                        <span>{new Date(conn.connectedAt).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {/* QR Code or Pairing Code Section */}
               {instance.qrcode ? (
                 <div className="text-center">
@@ -430,7 +475,10 @@ export default function WhatsAppConnectionPage() {
                 <div className="text-center py-8">
                   <QrCode className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground">
-                    Clique em "Conectar" para gerar o QR Code
+                    {instance.phoneNumber 
+                      ? `Reconectar ${formatPhoneForDisplay(instance.phoneNumber)}`
+                      : 'Clique em "Conectar" para gerar o QR Code'
+                    }
                   </p>
                 </div>
               )}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import WhatsAppInstance from '@/models/WhatsAppInstance'
+import { extractPhoneFromJid } from '@/lib/whatsapp-utils'
 
 export async function GET(
   request: NextRequest,
@@ -54,22 +55,67 @@ export async function GET(
     
     const instanceData = data.instance || data
     const connectionState = instanceData.state || instanceData.connectionStatus || 'close'
+    const phoneNumber = extractPhoneFromJid(instanceData.ownerJid)
     
-    await WhatsAppInstance.findOneAndUpdate(
-      { instanceName: instance },
-      { 
+    // Buscar instância atual
+    const currentInstance = await WhatsAppInstance.findOne({ instanceName: instance })
+    
+    if (!currentInstance) {
+      return NextResponse.json(
+        { error: 'Instância não encontrada' },
+        { status: 404 }
+      )
+    }
+    
+    // Se conectou com sucesso e temos um número de telefone
+    if (connectionState === 'open' && phoneNumber) {
+      // Verificar se já existe uma instância com este número
+      const existingPhoneInstance = await WhatsAppInstance.findOne({
+        phoneNumber,
+        isActive: true,
+        _id: { $ne: currentInstance._id }
+      })
+      
+      if (existingPhoneInstance) {
+        // Desativar a instância antiga com o mesmo número
+        await WhatsAppInstance.findByIdAndUpdate(existingPhoneInstance._id, {
+          isActive: false,
+          state: 'close'
+        })
+      }
+      
+      // Atualizar instância atual com o número
+      await WhatsAppInstance.findByIdAndUpdate(currentInstance._id, {
+        phoneNumber,
+        state: connectionState,
+        ownerJid: instanceData.ownerJid,
+        profileName: instanceData.profileName,
+        profilePicUrl: instanceData.profilePicUrl,
+        lastConnectionAt: new Date(),
+        $push: {
+          connectionHistory: {
+            instanceName: instance,
+            connectedAt: new Date()
+          }
+        }
+      })
+    } else {
+      // Apenas atualizar o estado
+      await WhatsAppInstance.findByIdAndUpdate(currentInstance._id, {
         state: connectionState,
         ownerJid: instanceData.ownerJid,
         profileName: instanceData.profileName,
         profilePicUrl: instanceData.profilePicUrl,
         ...(connectionState === 'open' && { lastConnectionAt: new Date() })
-      },
-      { new: true }
-    )
+      })
+    }
 
     return NextResponse.json({
       success: true,
-      instance: instanceData
+      instance: {
+        ...instanceData,
+        phoneNumber
+      }
     })
 
   } catch (error) {

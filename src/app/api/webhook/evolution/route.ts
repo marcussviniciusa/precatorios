@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
         console.log(`Message processed: ${messageType} - "${messageText}" from ${phone}`)
 
-        // Buscar ou criar lead
+        // Buscar ou criar lead (phone já é o identificador correto)
         let lead = await Lead.findOne({ phone })
         
         if (!lead) {
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // Buscar ou criar conversa
+        // Buscar ou criar conversa (usando leadId, que está correto)
         let conversation = await Conversation.findOne({ leadId: lead._id.toString() })
         
         if (!conversation) {

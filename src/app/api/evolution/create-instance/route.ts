@@ -98,21 +98,47 @@ export async function POST(request: NextRequest) {
     // Salvar instância no banco de dados local
     await dbConnect()
     
-    const newInstance = await WhatsAppInstance.create({
-      instanceName: body.instanceName,
-      state: 'close',
-      integration: 'WHATSAPP-BAILEYS',
-      webhookUrl: instanceData.webhook?.url,
-      isActive: true,
-      createdBy: 'system' // TODO: usar usuário autenticado quando implementado
+    // Verificar se já existe uma instância com este nome (inativa)
+    const existingInstance = await WhatsAppInstance.findOne({
+      instanceName: body.instanceName
     })
+    
+    let instanceRecord
+    
+    if (existingInstance) {
+      // Reativar instância existente
+      instanceRecord = await WhatsAppInstance.findByIdAndUpdate(
+        existingInstance._id,
+        {
+          state: 'close',
+          integration: 'WHATSAPP-BAILEYS',
+          webhookUrl: instanceData.webhook?.url,
+          isActive: true,
+          updatedAt: new Date()
+        },
+        { new: true }
+      )
+    } else {
+      // Criar nova instância
+      instanceRecord = await WhatsAppInstance.create({
+        instanceName: body.instanceName,
+        state: 'close',
+        integration: 'WHATSAPP-BAILEYS',
+        webhookUrl: instanceData.webhook?.url,
+        isActive: true,
+        createdBy: 'system', // TODO: usar usuário autenticado quando implementado
+        connectionHistory: []
+      })
+    }
 
     return NextResponse.json({
       success: true,
       instance: {
-        instanceName: newInstance.instanceName,
-        state: newInstance.state,
-        integration: newInstance.integration
+        instanceName: instanceRecord.instanceName,
+        state: instanceRecord.state,
+        integration: instanceRecord.integration,
+        phoneNumber: instanceRecord.phoneNumber,
+        reactivated: !!existingInstance
       },
       hash: data.hash,
       settings: data.settings
