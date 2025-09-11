@@ -36,6 +36,26 @@ export class PrecatoriosAI {
     this.model = model
   }
 
+  private cleanJsonResponse(response: string): string {
+    // Extrair JSON da resposta (pode vir com texto adicional)
+    let jsonStr = response
+    
+    // Se contém ```json, extrair apenas o JSON
+    const jsonMatch = jsonStr.match(/```json\s*([\s\S]*?)\s*```/)
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1]
+    } else {
+      // Tentar encontrar JSON no meio do texto
+      const jsonStart = jsonStr.indexOf('{')
+      const jsonEnd = jsonStr.lastIndexOf('}')
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        jsonStr = jsonStr.substring(jsonStart, jsonEnd + 1)
+      }
+    }
+    
+    return jsonStr.trim()
+  }
+
   private async callOpenRouter(prompt: string, systemPrompt: string): Promise<any> {
     try {
       const response = await fetch(this.baseUrl, {
@@ -96,7 +116,7 @@ export class PrecatoriosAI {
 
     try {
       const response = await this.callOpenRouter(prompt, systemPrompt)
-      const cleanJson = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+      const cleanJson = this.cleanJsonResponse(response)
       return JSON.parse(cleanJson)
     } catch (error) {
       console.error('Error extracting lead info:', error)
@@ -132,7 +152,7 @@ export class PrecatoriosAI {
 
     try {
       const response = await this.callOpenRouter(prompt, systemPrompt)
-      const cleanJson = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+      const cleanJson = this.cleanJsonResponse(response)
       return JSON.parse(cleanJson)
     } catch (error) {
       console.error('Error calculating score:', error)
@@ -169,7 +189,7 @@ export class PrecatoriosAI {
 
     try {
       const response = await this.callOpenRouter(prompt, systemPrompt)
-      const cleanJson = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+      const cleanJson = this.cleanJsonResponse(response)
       return JSON.parse(cleanJson)
     } catch (error) {
       console.error('Error deciding transfer:', error)
