@@ -17,7 +17,8 @@ import {
   File,
   Smartphone,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Trash2
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -71,6 +72,7 @@ export default function ConversationsPage() {
   const [showFileMenu, setShowFileMenu] = useState(false)
   const [instanceInfo, setInstanceInfo] = useState<InstanceInfo | null>(null)
   const [instanceError, setInstanceError] = useState<string | null>(null)
+  const [deletingConversation, setDeletingConversation] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -254,6 +256,47 @@ export default function ConversationsPage() {
     fetchConversationMessages(conversationId)
   }
 
+  // Função para excluir conversa
+  const handleDeleteConversation = async (conversationId: string, leadName: string) => {
+    const confirmed = window.confirm(
+      `Tem certeza que deseja excluir a conversa com ${leadName}?\n\nEsta ação não pode ser desfeita e todas as mensagens serão perdidas.`
+    )
+    
+    if (!confirmed) return
+    
+    try {
+      setDeletingConversation(conversationId)
+      
+      const response = await fetch(`/api/conversations/${conversationId}/delete`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        // Remover da lista de conversas
+        setConversations(prev => prev.filter(conv => conv._id !== conversationId))
+        
+        // Se era a conversa selecionada, limpar seleção
+        if (selectedConversation === conversationId) {
+          setSelectedConversation(null)
+          setConversationDetails(null)
+          setInstanceInfo(null)
+          setInstanceError(null)
+        }
+        
+        // Opcional: mostrar toast de sucesso
+        console.log('Conversa excluída com sucesso')
+      } else {
+        const errorData = await response.json()
+        alert(`Erro ao excluir conversa: ${errorData.error}`)
+      }
+    } catch (error) {
+      console.error('Erro ao excluir conversa:', error)
+      alert('Erro ao excluir conversa. Tente novamente.')
+    } finally {
+      setDeletingConversation(null)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
       active: { variant: 'default', label: 'Ativa' },
@@ -331,48 +374,70 @@ export default function ConversationsPage() {
                 {conversations.map((conversation) => (
                 <div
                   key={conversation._id}
-                  className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
-                    selectedConversation === conversation._id ? 'bg-blue-50 border-l-4 border-l-primary' : ''
+                  className={`relative group p-4 border-b transition-colors ${
+                    selectedConversation === conversation._id ? 'bg-blue-50 border-l-4 border-l-primary' : 'hover:bg-gray-50'
                   }`}
-                  onClick={() => handleConversationSelect(conversation._id)}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                        {conversation.leadName.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">{conversation.leadName}</h4>
-                        <p className="text-xs text-gray-500">{conversation.leadPhone}</p>
-                      </div>
-                    </div>
-                    {conversation.unreadCount > 0 && (
-                      <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                        {conversation.unreadCount}
-                      </span>
+                  {/* Botão de excluir (visível no hover) */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteConversation(conversation._id, conversation.leadName)
+                    }}
+                    disabled={deletingConversation === conversation._id}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full p-1 text-xs disabled:opacity-50"
+                    title={`Excluir conversa com ${conversation.leadName}`}
+                  >
+                    {deletingConversation === conversation._id ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3 h-3" />
                     )}
-                  </div>
+                  </button>
                   
-                  <div className="flex items-center space-x-2 mb-2">
-                    {getStatusBadge(conversation.status)}
-                    {getClassificationBadge(conversation.classification)}
-                  </div>
-                  
-                  <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                    {conversation.lastMessage}
-                  </p>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{formatDate(new Date(conversation.lastMessageTime))}</span>
+                  {/* Conteúdo da conversa (clicável para selecionar) */}
+                  <div 
+                    className="cursor-pointer"
+                    onClick={() => handleConversationSelect(conversation._id)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
+                          {conversation.leadName.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900">{conversation.leadName}</h4>
+                          <p className="text-xs text-gray-500">{conversation.leadPhone}</p>
+                        </div>
+                      </div>
+                      {conversation.unreadCount > 0 && (
+                        <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                          {conversation.unreadCount}
+                        </span>
+                      )}
                     </div>
-                    {conversation.assignedAgent && (
+                  
+                    <div className="flex items-center space-x-2 mb-2">
+                      {getStatusBadge(conversation.status)}
+                      {getClassificationBadge(conversation.classification)}
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                      {conversation.lastMessage}
+                    </p>
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500">
                       <div className="flex items-center space-x-1">
-                        <User className="w-3 h-3" />
-                        <span>{conversation.assignedAgent}</span>
+                        <Clock className="w-3 h-3" />
+                        <span>{formatDate(new Date(conversation.lastMessageTime))}</span>
                       </div>
-                    )}
+                      {conversation.assignedAgent && (
+                        <div className="flex items-center space-x-1">
+                          <User className="w-3 h-3" />
+                          <span>{conversation.assignedAgent}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 ))}
