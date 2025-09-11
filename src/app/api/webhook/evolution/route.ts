@@ -184,8 +184,8 @@ export async function POST(request: NextRequest) {
         lead.lastInteraction = new Date()
         await lead.save()
 
-        // Processar mensagem para qualificação automática
-        await processMessageForQualification(messageText, lead, conversation, instance)
+        // Processar mensagem com IA
+        await processMessageWithAI(messageText, lead, conversation, instance)
       }
     }
 
@@ -200,71 +200,23 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function processMessageForQualification(
+async function processMessageWithAI(
   message: string, 
   lead: any, 
   conversation: any,
   instanceName: string
 ) {
-  const lowerMessage = message.toLowerCase()
-  
-  // Extrair informações da mensagem
-  let scoreUpdate = 0
-  const updates: any = {}
-
-  // Verificar se menciona ter precatório
-  if (lowerMessage.includes('precatório') || lowerMessage.includes('precatorio')) {
-    updates.hasPrecatorio = true
-    scoreUpdate += 50
-  }
-
-  // Extrair valor se mencionado
-  const valueMatch = message.match(/r\$?\s?([\d.,]+)/i)
-  if (valueMatch) {
-    const value = parseFloat(valueMatch[1].replace(/[.,]/g, ''))
-    if (value > 10000) {
-      updates.precatorioValue = value
-      updates.isEligible = true
-      scoreUpdate += 25
-    }
-  }
-
-  // Verificar urgência
-  const urgentKeywords = ['urgente', 'pressa', 'rápido', 'logo']
-  if (urgentKeywords.some(keyword => lowerMessage.includes(keyword))) {
-    updates.urgency = 'high'
-    scoreUpdate += 15
-  }
-
-  // Extrair estado/cidade
-  const states = ['sp', 'rj', 'mg', 'rs', 'pr', 'sc', 'ba', 'go', 'df', 'es']
-  const stateMatch = states.find(state => lowerMessage.includes(state))
-  if (stateMatch) {
-    updates.state = stateMatch.toUpperCase()
-  }
-
-  // Atualizar lead se houver mudanças
-  if (Object.keys(updates).length > 0 || scoreUpdate > 0) {
-    const newScore = Math.min(lead.score + scoreUpdate, 100)
-    const newClassification = getLeadClassification(newScore)
-    
-    await Lead.findByIdAndUpdate(lead._id, {
-      ...updates,
-      score: newScore,
-      classification: newClassification
-    })
-  }
-
-  // Enviar resposta automática baseada na qualificação
-  await sendAutomaticResponse(lead, conversation, message, instanceName)
-}
-
-async function sendAutomaticResponse(lead: any, conversation: any, userMessage: string, instanceName: string) {
   // Verificar se o bot está ativo na configuração
   const config = await BotConfig.findOne().sort({ updatedAt: -1 })
   
   if (!config || !config.isActive) {
     console.log('Bot is disabled, skipping automatic response')
+    return
+  }
+
+  // Verificar se IA está habilitada, senão não processa
+  if (!config.aiConfig?.enabled) {
+    console.log('AI is disabled, skipping AI processing')
     return
   }
   
@@ -294,45 +246,79 @@ async function sendAutomaticResponse(lead: any, conversation: any, userMessage: 
     })
     return
   }
-  
-  let response = ''
-  const lowerMessage = userMessage.toLowerCase()
-
-  if (lowerMessage.includes('oi') || lowerMessage.includes('olá') || lowerMessage.includes('bom dia')) {
-    response = config.prompts.welcome.replace('{nome}', lead.name)
-  } else if (lead.hasPrecatorio && !lead.isEligible) {
-    response = config.prompts.qualification
-  } else if (lead.score >= config.transferRules.scoreThreshold) {
-    response = config.prompts.transfer
-    
-    // Marcar para transferência humana
-    await Conversation.findByIdAndUpdate(conversation._id, {
-      status: 'transferred',
-      'metadata.transferReason': 'Lead quente - qualificação automática'
-    })
-  } else if (lowerMessage.includes('precatório') || lowerMessage.includes('precatorio')) {
-    response = config.prompts.qualification
-  } else {
-    response = config.prompts.welcome
-  }
-
-  // Verificar se deve transferir por palavras-chave
-  const keywordTriggered = config.transferRules.keywordTriggers.some(keyword => 
-    lowerMessage.includes(keyword.toLowerCase())
-  )
-  
-  if (keywordTriggered) {
-    response = config.prompts.transfer
-    
-    // Marcar para transferência humana
-    await Conversation.findByIdAndUpdate(conversation._id, {
-      status: 'transferred',
-      'metadata.transferReason': 'Palavra-chave trigger'
-    })
-  }
 
   try {
-    // Enviar mensagem via Evolution API usando a instância correta
+    // Importar o serviço de IA dinamicamente
+    const { PrecatoriosAI } = await import('@/lib/ai-service')
+    
+    // Obter instância da IA
+    const ai = await PrecatoriosAI.getInstance()
+    if (!ai) {
+      console.log('AI service not available, skipping processing')
+      return
+    }
+
+    // Preparar contexto da conversa
+    const conversationHistory = conversation.messages
+      .slice(-5) // Últimas 5 mensagens
+      .map((msg: any) => `${msg.sender}: ${msg.content}`)
+      .join('\n')
+
+    // 1. Extrair informações do lead usando IA
+    if (config.aiConfig.settings.autoExtraction) {
+      const extractedInfo = await ai.extractLeadInfo(message, conversationHistory)
+      
+      if (Object.keys(extractedInfo).length > 0) {
+        console.log('AI extracted lead info:', extractedInfo)
+        await Lead.findByIdAndUpdate(lead._id, extractedInfo)
+        // Atualizar lead local com as novas informações
+        Object.assign(lead, extractedInfo)
+      }
+    }
+
+    // 2. Calcular score usando IA
+    if (config.aiConfig.settings.autoScoring) {
+      const scoreResult = await ai.calculateScore(lead, conversationHistory)
+      
+      if (scoreResult.score !== lead.score) {
+        console.log(`AI calculated new score: ${scoreResult.score} (${scoreResult.classification})`)
+        await Lead.findByIdAndUpdate(lead._id, {
+          score: scoreResult.score,
+          classification: scoreResult.classification
+        })
+        // Atualizar lead local
+        lead.score = scoreResult.score
+        lead.classification = scoreResult.classification
+      }
+    }
+
+    // 3. Decidir transferência usando IA
+    if (config.aiConfig.settings.autoTransfer) {
+      const transferDecision = await ai.shouldTransfer(
+        lead.score,
+        conversationHistory,
+        conversation.messages.length
+      )
+
+      if (transferDecision.shouldTransfer) {
+        console.log(`AI decided to transfer: ${transferDecision.reason}`)
+        await Conversation.findByIdAndUpdate(conversation._id, {
+          status: 'transferred',
+          'metadata.transferReason': transferDecision.reason
+        })
+        return
+      }
+    }
+
+    // 4. Gerar resposta usando IA
+    const response = await ai.generateResponse(
+      message,
+      lead,
+      conversationHistory,
+      config.aiConfig.prompts.response
+    )
+
+    // Enviar mensagem via Evolution API
     const evolutionResponse = await fetch(`${process.env.EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
       method: 'POST',
       headers: {
@@ -368,8 +354,9 @@ async function sendAutomaticResponse(lead: any, conversation: any, userMessage: 
     // Broadcast da mensagem do bot via WebSocket
     broadcastNewMessage(conversation._id.toString(), botMessage)
     
-    console.log(`Bot response sent to ${lead.phone}: "${response}"`)
+    console.log(`AI response sent to ${lead.phone}: "${response}"`)
   } catch (error) {
-    console.error('Error sending automatic response:', error)
+    console.error('Error processing message with AI:', error)
   }
 }
+

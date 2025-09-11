@@ -99,6 +99,25 @@ export interface BotConfig {
     keywordTriggers: string[]
     maxBotResponses: number
   }
+  aiConfig?: {
+    enabled: boolean
+    provider: string
+    apiKey?: string
+    model: string
+    prompts: {
+      extraction: string
+      scoring: string
+      response: string
+      transfer: string
+    }
+    settings: {
+      autoExtraction: boolean
+      autoScoring: boolean
+      autoTransfer: boolean
+      temperature: number
+      maxTokens: number
+    }
+  }
   updatedAt?: Date
   updatedBy?: string
 }

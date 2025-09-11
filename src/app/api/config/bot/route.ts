@@ -33,6 +33,25 @@ export async function GET(request: NextRequest) {
           scoreThreshold: 60,
           keywordTriggers: ['falar com humano', 'quero falar com alguém', 'atendente', 'urgente'],
           maxBotResponses: 10
+        },
+        aiConfig: {
+          enabled: false,
+          provider: 'openrouter',
+          apiKey: '',
+          model: 'openai/gpt-4-turbo-preview',
+          prompts: {
+            extraction: 'Extraia informações sobre precatórios da mensagem: nome, valor, estado, urgência, tipo.',
+            scoring: 'Calcule o score do lead baseado nas informações: precatório confirmado (+40), valor elegível (+20), estado válido (+10), urgência (+15), documentos (+10), interesse (+5).',
+            response: 'Você é um assistente de precatórios. Seja cordial, direto e colete informações básicas. Máximo 3 linhas por resposta.',
+            transfer: 'Decida se deve transferir para humano baseado no score (>=60), urgência, solicitação explícita ou mais de 5 mensagens.'
+          },
+          settings: {
+            autoExtraction: true,
+            autoScoring: true,
+            autoTransfer: true,
+            temperature: 0.3,
+            maxTokens: 500
+          }
         }
       }
       
@@ -73,7 +92,7 @@ export async function POST(request: NextRequest) {
     const configData = await request.json()
     console.log('Config data received:', JSON.stringify(configData, null, 2))
 
-    // Validate required fields (responseTemplates é opcional com defaults)
+    // Validate required fields (responseTemplates e aiConfig são opcionais com defaults)
     const requiredFields = ['isActive', 'workingHours', 'prompts', 'eligibilityRules', 'transferRules']
     for (const field of requiredFields) {
       // Use hasOwnProperty or 'in' operator instead of truthy check for boolean fields
@@ -83,6 +102,28 @@ export async function POST(request: NextRequest) {
         console.log(`Field value:`, configData[field])
         return NextResponse.json(
           { error: `Campo obrigatório: ${field}` },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Validate aiConfig if provided
+    if (configData.aiConfig) {
+      const aiRequiredFields = ['enabled', 'provider', 'model', 'prompts', 'settings']
+      for (const field of aiRequiredFields) {
+        if (!(field in configData.aiConfig) || configData.aiConfig[field] === undefined || configData.aiConfig[field] === null) {
+          console.log(`Missing required AI field: aiConfig.${field}`)
+          return NextResponse.json(
+            { error: `Campo obrigatório de IA: aiConfig.${field}` },
+            { status: 400 }
+          )
+        }
+      }
+
+      // If AI is enabled, require API key
+      if (configData.aiConfig.enabled && !configData.aiConfig.apiKey) {
+        return NextResponse.json(
+          { error: 'API Key é obrigatória quando IA está habilitada' },
           { status: 400 }
         )
       }

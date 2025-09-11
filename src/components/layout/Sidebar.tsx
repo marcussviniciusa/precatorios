@@ -12,7 +12,8 @@ import {
   Phone,
   FileText,
   Bot,
-  Smartphone
+  Smartphone,
+  Brain
 } from 'lucide-react'
 
 const navigation = [
@@ -50,6 +51,11 @@ const navigation = [
     name: 'Bot Config',
     href: '/config',
     icon: Bot
+  },
+  {
+    name: 'IA Config',
+    href: '/config/ai',
+    icon: Brain
   },
   {
     name: 'Configurações',

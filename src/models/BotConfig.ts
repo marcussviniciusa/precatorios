@@ -56,6 +56,37 @@ const BotConfigSchema = new Schema<BotConfig>({
     },
     maxBotResponses: { type: Number, default: 10 }
   },
+  aiConfig: {
+    enabled: { type: Boolean, default: false },
+    provider: { type: String, default: 'openrouter' },
+    apiKey: String,
+    model: { type: String, default: 'openai/gpt-4-turbo-preview' },
+    prompts: {
+      extraction: {
+        type: String,
+        default: 'Extraia informações sobre precatórios da mensagem: nome, valor, estado, urgência, tipo.'
+      },
+      scoring: {
+        type: String,
+        default: 'Calcule o score do lead baseado nas informações: precatório confirmado (+40), valor elegível (+20), estado válido (+10), urgência (+15), documentos (+10), interesse (+5).'
+      },
+      response: {
+        type: String,
+        default: 'Você é um assistente de precatórios. Seja cordial, direto e colete informações básicas. Máximo 3 linhas por resposta.'
+      },
+      transfer: {
+        type: String,
+        default: 'Decida se deve transferir para humano baseado no score (>=60), urgência, solicitação explícita ou mais de 5 mensagens.'
+      }
+    },
+    settings: {
+      autoExtraction: { type: Boolean, default: true },
+      autoScoring: { type: Boolean, default: true },
+      autoTransfer: { type: Boolean, default: true },
+      temperature: { type: Number, default: 0.3 },
+      maxTokens: { type: Number, default: 500 }
+    }
+  },
   updatedBy: { type: String, ref: 'User' }
 }, {
   timestamps: true
