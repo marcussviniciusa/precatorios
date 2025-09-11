@@ -60,10 +60,11 @@ export class PrecatoriosAI {
       if (!response.ok) {
         const errorText = await response.text()
         console.error('OpenRouter API error:', response.status, errorText)
-        throw new Error(`OpenRouter API error: ${response.status}`)
+        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`)
       }
 
       const data = await response.json()
+      console.log('OpenRouter response:', JSON.stringify(data, null, 2))
       return data.choices[0].message.content
     } catch (error) {
       console.error('Error calling OpenRouter:', error)
