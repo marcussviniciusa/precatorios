@@ -23,6 +23,177 @@ import {
 import { formatDate } from '@/lib/utils'
 import { useWebSocket } from '@/hooks/useWebSocket'
 
+// Component for WhatsApp-style audio messages
+interface AudioMessageProps {
+  audioUrl: string
+  mimetype?: string
+  isFromUser: boolean
+}
+
+const AudioMessage = ({ audioUrl, mimetype, isFromUser }: AudioMessageProps) => {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [duration, setDuration] = useState<number | null>(null)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
+  const audioRef = useRef<HTMLAudioElement>(null)
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration)
+      setIsLoading(false)
+    }
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime)
+    }
+
+    const handlePlay = () => setIsPlaying(true)
+    const handlePause = () => setIsPlaying(false)
+    const handleEnded = () => {
+      setIsPlaying(false)
+      setCurrentTime(0)
+    }
+
+    const handleError = () => {
+      setHasError(true)
+      setIsLoading(false)
+    }
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+    audio.addEventListener('timeupdate', handleTimeUpdate)
+    audio.addEventListener('play', handlePlay)
+    audio.addEventListener('pause', handlePause)
+    audio.addEventListener('ended', handleEnded)
+    audio.addEventListener('error', handleError)
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      audio.removeEventListener('timeupdate', handleTimeUpdate)
+      audio.removeEventListener('play', handlePlay)
+      audio.removeEventListener('pause', handlePause)
+      audio.removeEventListener('ended', handleEnded)
+      audio.removeEventListener('error', handleError)
+    }
+  }, [audioUrl])
+
+  const togglePlayPause = () => {
+    const audio = audioRef.current
+    if (!audio || hasError) return
+
+    if (isPlaying) {
+      audio.pause()
+    } else {
+      audio.play().catch(() => setHasError(true))
+    }
+  }
+
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return '0:00'
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  const progressPercentage = duration ? (currentTime / duration) * 100 : 0
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current
+    if (!audio || !duration) return
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const percentage = clickX / rect.width
+    const newTime = percentage * duration
+    
+    audio.currentTime = newTime
+    setCurrentTime(newTime)
+  }
+
+  if (hasError) {
+    return (
+      <div className="flex items-center space-x-3 p-3 bg-gray-100 rounded-lg max-w-[280px]">
+        <div className="w-10 h-10 bg-red-400 rounded-full flex items-center justify-center">
+          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-700">Erro no áudio</p>
+          <p className="text-xs text-gray-500">Não foi possível carregar o áudio</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`flex items-center space-x-3 p-3 rounded-lg w-full max-w-[300px] sm:max-w-[280px] ${
+      isFromUser ? 'bg-white shadow-sm border border-gray-100' : 'bg-gray-100'
+    }`}>
+      <audio ref={audioRef} preload="metadata">
+        <source src={audioUrl} type={mimetype || "audio/ogg"} />
+        <source src={audioUrl} type="audio/mpeg" />
+        <source src={audioUrl} type="audio/wav" />
+      </audio>
+      
+      <button
+        onClick={togglePlayPause}
+        disabled={isLoading}
+        className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+          isLoading 
+            ? 'bg-gray-300 cursor-not-allowed' 
+            : isFromUser 
+            ? 'bg-green-500 hover:bg-green-600 text-white' 
+            : 'bg-green-500 hover:bg-green-600 text-white'
+        }`}
+      >
+        {isLoading ? (
+          <RefreshCw className="w-4 h-4 animate-spin" />
+        ) : isPlaying ? (
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+        ) : (
+          <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+          </svg>
+        )}
+      </button>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-sm font-medium text-gray-700">Áudio</p>
+          <span className="text-xs text-gray-500">
+            {formatTime(currentTime)} / {duration ? formatTime(duration) : '--:--'}
+          </span>
+        </div>
+        
+        <div 
+          className="w-full h-2 bg-gray-200 rounded-full overflow-hidden cursor-pointer hover:h-2.5 transition-all duration-200"
+          onClick={handleProgressClick}
+          title={`Clique para pular para ${formatTime((duration || 0) * (0.5))}`}
+        >
+          <div 
+            className={`h-full transition-all duration-200 ${
+              isFromUser ? 'bg-green-500' : 'bg-green-500'
+            }`}
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
+        
+        {mimetype && (
+          <p className="text-xs text-gray-400 mt-1 truncate">
+            {mimetype.replace('audio/', '').toUpperCase()}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 interface ConversationListItem {
   _id: string
   leadName: string
@@ -704,23 +875,25 @@ export default function ConversationsPage() {
                             </div>
                           ) : message.type === 'audio' ? (
                             <div className="space-y-2">
-                              <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded">
-                                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                                  <span className="text-white text-xs">🎵</span>
+                              {message.metadata?.mediaUrl ? (
+                                <AudioMessage 
+                                  audioUrl={message.metadata.mediaUrl}
+                                  mimetype={message.metadata?.mimetype}
+                                  isFromUser={message.sender === 'user'}
+                                />
+                              ) : (
+                                <div className="flex items-center space-x-3 p-3 bg-gray-100 rounded-lg max-w-[280px]">
+                                  <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-700">Mensagem de áudio</p>
+                                    <p className="text-xs text-gray-500">Áudio não disponível para reprodução</p>
+                                  </div>
                                 </div>
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-gray-900">
-                                    Áudio enviado
-                                  </p>
-                                </div>
-                                {message.metadata && message.metadata.mediaUrl && (
-                                  <audio controls className="h-8">
-                                    <source src={message.metadata.mediaUrl} type="audio/ogg" />
-                                    <source src={message.metadata.mediaUrl} type="audio/mpeg" />
-                                    Seu navegador não suporta áudio.
-                                  </audio>
-                                )}
-                              </div>
+                              )}
                             </div>
                           ) : message.type === 'video' ? (
                             <div className="space-y-2">
