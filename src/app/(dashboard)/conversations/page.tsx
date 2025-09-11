@@ -43,6 +43,7 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser }: AudioMessageProps) => 
     if (!audio) return
 
     const handleLoadedMetadata = () => {
+      console.log('Audio loaded successfully:', audioUrl)
       setDuration(audio.duration)
       setIsLoading(false)
     }
@@ -58,8 +59,14 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser }: AudioMessageProps) => 
       setCurrentTime(0)
     }
 
-    const handleError = () => {
+    const handleError = (e: Event) => {
+      console.error('Audio loading error:', e, audioUrl)
       setHasError(true)
+      setIsLoading(false)
+    }
+
+    const handleCanPlay = () => {
+      console.log('Audio can play:', audioUrl)
       setIsLoading(false)
     }
 
@@ -69,6 +76,7 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser }: AudioMessageProps) => 
     audio.addEventListener('pause', handlePause)
     audio.addEventListener('ended', handleEnded)
     audio.addEventListener('error', handleError)
+    audio.addEventListener('canplay', handleCanPlay)
 
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
@@ -77,6 +85,7 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser }: AudioMessageProps) => 
       audio.removeEventListener('pause', handlePause)
       audio.removeEventListener('ended', handleEnded)
       audio.removeEventListener('error', handleError)
+      audio.removeEventListener('canplay', handleCanPlay)
     }
   }, [audioUrl])
 
@@ -133,10 +142,13 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser }: AudioMessageProps) => 
     <div className={`flex items-center space-x-3 p-3 rounded-lg w-full max-w-[300px] sm:max-w-[280px] ${
       isFromUser ? 'bg-white shadow-sm border border-gray-100' : 'bg-gray-100'
     }`}>
-      <audio ref={audioRef} preload="metadata">
+      <audio ref={audioRef} preload="metadata" crossOrigin="anonymous">
         <source src={audioUrl} type={mimetype || "audio/ogg"} />
+        <source src={audioUrl} type="audio/ogg; codecs=opus" />
         <source src={audioUrl} type="audio/mpeg" />
         <source src={audioUrl} type="audio/wav" />
+        <source src={audioUrl} type="audio/webm" />
+        Seu navegador não suporta áudio.
       </audio>
       
       <button

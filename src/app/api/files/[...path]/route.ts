@@ -84,6 +84,9 @@ export async function GET(
         case 'ogg':
           contentType = 'audio/ogg'
           break
+        case 'opus':
+          contentType = 'audio/ogg; codecs=opus'
+          break
         case 'mp4':
           contentType = 'video/mp4'
           break
@@ -106,7 +109,7 @@ export async function GET(
         headers['Content-Disposition'] = 'inline'
       }
 
-      return new NextResponse(fileBuffer, { headers })
+      return new NextResponse(fileBuffer as any, { headers })
 
     } catch (error) {
       console.error('Error serving file from MinIO:', error)

@@ -11,13 +11,33 @@ const minioClient = new Minio.Client({
 
 const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'precatorios-files'
 
-// Ensure bucket exists
+// Ensure bucket exists with public read policy
 export const ensureBucketExists = async (): Promise<void> => {
   try {
     const exists = await minioClient.bucketExists(BUCKET_NAME)
     if (!exists) {
       await minioClient.makeBucket(BUCKET_NAME, 'us-east-1')
       console.log(`MinIO bucket '${BUCKET_NAME}' created successfully.`)
+      
+      // Set public read policy for the bucket
+      const policy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: { AWS: ['*'] },
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${BUCKET_NAME}/*`]
+          }
+        ]
+      }
+      
+      try {
+        await minioClient.setBucketPolicy(BUCKET_NAME, JSON.stringify(policy))
+        console.log(`Bucket '${BUCKET_NAME}' set to public read access.`)
+      } catch (policyError) {
+        console.log('Could not set public policy, files may require authentication:', policyError)
+      }
     }
   } catch (error) {
     console.error('Error ensuring MinIO bucket exists:', error)
@@ -61,7 +81,7 @@ export const uploadFileToMinio = async (
 
     console.log(`File uploaded successfully to MinIO: ${uniqueFileName}`, objInfo)
     
-    // Return the file URL
+    // For now, just return direct URL - we'll set bucket as public
     return `${getMinioUrl()}/${BUCKET_NAME}/${uniqueFileName}`
     
   } catch (error) {
@@ -82,7 +102,20 @@ export const uploadBufferToMinio = async (
 
     // Create unique filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-    const fileExtension = fileName.split('.').pop() || 'bin'
+    let fileExtension = fileName.split('.').pop() || 'bin'
+    
+    // Determine extension from mimetype if not available from filename
+    if (fileExtension === 'media-file' || fileExtension === 'bin') {
+      if (mimetype.includes('audio/ogg')) fileExtension = 'ogg'
+      else if (mimetype.includes('audio/mpeg')) fileExtension = 'mp3'
+      else if (mimetype.includes('audio/wav')) fileExtension = 'wav'
+      else if (mimetype.includes('image/jpeg')) fileExtension = 'jpg'
+      else if (mimetype.includes('image/png')) fileExtension = 'png'
+      else if (mimetype.includes('image/gif')) fileExtension = 'gif'
+      else if (mimetype.includes('video/mp4')) fileExtension = 'mp4'
+      else if (mimetype.includes('application/pdf')) fileExtension = 'pdf'
+    }
+    
     const uniqueFileName = `${folder}/${timestamp}-${Math.random().toString(36).substring(7)}.${fileExtension}`
 
     // Set metadata
@@ -103,7 +136,7 @@ export const uploadBufferToMinio = async (
 
     console.log(`Buffer uploaded successfully to MinIO: ${uniqueFileName}`, objInfo)
     
-    // Return the file URL
+    // For now, just return direct URL - we'll set bucket as public
     return `${getMinioUrl()}/${BUCKET_NAME}/${uniqueFileName}`
     
   } catch (error) {
