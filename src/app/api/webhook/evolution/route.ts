@@ -111,22 +111,44 @@ export async function POST(request: NextRequest) {
 
         let minioUrl: string | undefined
 
-        // Se há URL de mídia, tentar baixar e salvar no MinIO
+        // Se há URL de mídia, baixar usando Evolution API (decodificado) e salvar no MinIO
         if (whatsappMediaUrl) {
           try {
-            console.log(`Attempting to download media from: ${whatsappMediaUrl}`)
+            console.log(`Attempting to download media using Evolution API for message: ${message.key.id}`)
             
-            const mediaResponse = await fetch(whatsappMediaUrl)
-            if (mediaResponse.ok) {
-              const mediaBuffer = Buffer.from(await mediaResponse.arrayBuffer())
-              const folder = messageType === 'image' ? 'images' : 
-                           messageType === 'audio' ? 'audio' :
-                           messageType === 'video' ? 'videos' : 'documents'
-              
-              minioUrl = await uploadBufferToMinio(mediaBuffer, fileName, mimetype || 'application/octet-stream', folder)
-              console.log(`Media saved to MinIO: ${minioUrl}`)
+            // Usar Evolution API para obter arquivo decodificado
+            const evolutionResponse = await fetch(`${process.env.EVOLUTION_API_URL}/chat/getBase64FromMediaMessage/${instance}`, {
+              method: 'POST',
+              headers: {
+                'apikey': process.env.EVOLUTION_API_KEY || '',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                message: {
+                  key: {
+                    id: message.key.id
+                  }
+                }
+              })
+            })
+
+            if (evolutionResponse.ok) {
+              const base64Data = await evolutionResponse.json()
+              if (base64Data.base64) {
+                const mediaBuffer = Buffer.from(base64Data.base64, 'base64')
+                console.log(`Media decoded successfully from Evolution API (${mediaBuffer.length} bytes)`)
+                
+                const folder = messageType === 'image' ? 'images' : 
+                             messageType === 'audio' ? 'audio' :
+                             messageType === 'video' ? 'videos' : 'documents'
+                
+                minioUrl = await uploadBufferToMinio(mediaBuffer, fileName, mimetype || 'application/octet-stream', folder)
+                console.log(`Media saved to MinIO: ${minioUrl}`)
+              } else {
+                console.log('Evolution API response missing base64 data:', base64Data)
+              }
             } else {
-              console.log(`Failed to download media: ${mediaResponse.status} ${mediaResponse.statusText}`)
+              console.log(`Evolution API failed: ${evolutionResponse.status} ${evolutionResponse.statusText}`)
             }
           } catch (error) {
             console.error('Error downloading/saving media to MinIO:', error)
