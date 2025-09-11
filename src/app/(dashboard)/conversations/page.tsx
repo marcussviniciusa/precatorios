@@ -484,15 +484,7 @@ export default function ConversationsPage() {
         })
 
         if (response.ok) {
-          const data = await response.json()
-          
-          // Adicionar nova mensagem à lista
-          if (conversationDetails) {
-            setConversationDetails(prev => prev ? {
-              ...prev,
-              messages: [...prev.messages, data.message]
-            } : null)
-          }
+          // Não adicionar mensagem aqui - WebSocket já vai fazer isso via handleNewMessage
           
           setNewMessage('')
           setSelectedFile(null)
