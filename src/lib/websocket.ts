@@ -94,7 +94,8 @@ export const broadcastNewMessage = (conversationId: string, message: any) => {
     io.emit('conversation-updated', {
       conversationId,
       lastMessage: message.content,
-      lastMessageTime: message.timestamp
+      lastMessageTime: message.timestamp,
+      isUserMessage: message.sender === 'user'
     })
     
     console.log(`Broadcasted new message to conversation:${conversationId}`)

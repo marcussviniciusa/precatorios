@@ -93,15 +93,24 @@ export default function ConversationsPage() {
     }
   }, [selectedConversation, conversationDetails])
 
-  const handleConversationUpdated = useCallback((data: { conversationId: string; lastMessage?: string; lastMessageTime?: Date }) => {
+  const handleConversationUpdated = useCallback((data: { conversationId: string; lastMessage?: string; lastMessageTime?: Date; isUserMessage?: boolean }) => {
     // Update the conversation in the list
     setConversations(prev => prev.map(conv => {
       if (conv._id === data.conversationId) {
+        // Only increment unread count if:
+        // 1. It's a user message (not bot/agent)
+        // 2. The conversation is not currently selected
+        const shouldIncrementUnread = data.isUserMessage && selectedConversation !== data.conversationId
+        
         return {
           ...conv,
           lastMessage: data.lastMessage || conv.lastMessage,
           lastMessageTime: data.lastMessageTime ? new Date(data.lastMessageTime) : conv.lastMessageTime,
-          unreadCount: selectedConversation === data.conversationId ? 0 : conv.unreadCount + 1
+          unreadCount: selectedConversation === data.conversationId 
+            ? 0 // Reset to 0 if conversation is selected
+            : shouldIncrementUnread 
+            ? conv.unreadCount + 1 
+            : conv.unreadCount // Keep existing count for bot/agent messages
         }
       }
       return conv
@@ -127,6 +136,28 @@ export default function ConversationsPage() {
     onConversationUpdated: handleConversationUpdated,
     onConversationDeleted: handleConversationDeleted
   })
+
+  // Refresh conversations when WebSocket reconnects to ensure data consistency
+  useEffect(() => {
+    if (isConnected && conversations.length > 0) {
+      // Refresh conversations data after reconnection
+      const refreshConversations = async () => {
+        try {
+          const response = await fetch('/api/conversations')
+          if (response.ok) {
+            const conversationsData = await response.json()
+            setConversations(conversationsData)
+          }
+        } catch (error) {
+          console.error('Error refreshing conversations after reconnection:', error)
+        }
+      }
+      
+      // Add a small delay to ensure WebSocket is fully ready
+      const timeoutId = setTimeout(refreshConversations, 1000)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [isConnected, conversations.length])
 
   useEffect(() => {
     async function fetchConversations() {
@@ -157,6 +188,24 @@ export default function ConversationsPage() {
       scrollToBottom()
     }
   }, [conversationDetails?.messages])
+
+  // Refresh unread count from database for a specific conversation
+  const refreshUnreadCount = async (conversationId: string) => {
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}/unread-count`)
+      if (response.ok) {
+        const { unreadCount } = await response.json()
+        
+        setConversations(prev => prev.map(conv => 
+          conv._id === conversationId 
+            ? { ...conv, unreadCount }
+            : conv
+        ))
+      }
+    } catch (error) {
+      console.error('Error refreshing unread count:', error)
+    }
+  }
 
   // Buscar informações da instância para uma conversa
   const fetchInstanceInfo = async (conversationId: string) => {

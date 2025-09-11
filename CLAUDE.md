@@ -105,18 +105,53 @@ The system uses Evolution API for WhatsApp integration:
 - **Auto-Response Logic**: Webhook processes messages and calculates lead scores
 - **Bot Configuration**: Controls response templates and transfer rules
 
+## Real-time WebSocket System
+
+The system implements a complete real-time messaging infrastructure using Socket.IO:
+
+### WebSocket Architecture
+- **Server Implementation** (`src/lib/websocket.ts`): Global singleton Socket.IO server with event broadcasting
+- **Client Hook** (`src/hooks/useWebSocket.ts`): React hook for WebSocket connection management
+- **API Endpoint** (`/src/pages/api/socketio.ts`): Socket.IO server initialization endpoint
+
+### Real-time Features
+- **Instant Message Updates**: WhatsApp messages appear immediately in the web interface
+- **Room-based Broadcasting**: Clients join conversation-specific rooms for targeted updates
+- **Connection Status**: Visual indicators showing real-time connection status
+- **Agent Message Sync**: Messages sent by agents broadcast instantly to all connected clients
+- **Conversation Management**: Real-time updates for conversation deletion and status changes
+
+### WebSocket Events
+- `new-message`: Broadcasts new messages to conversation participants
+- `conversation-updated`: Updates conversation metadata (last message, timestamps)
+- `conversation-deleted`: Notifies clients when conversations are removed
+- `instance-status-changed`: Updates WhatsApp instance connection status
+
+### Implementation Notes
+- **Singleton Pattern**: Uses `globalForSocket.socketio` to maintain single WebSocket server instance
+- **Webhook Integration**: All webhook endpoints broadcast events via WebSocket after database operations
+- **Client Management**: Automatic room joining/leaving when users navigate between conversations
+- **Reconnection Logic**: Built-in reconnection and connection stability management
+
+### WebSocket Initialization
+The WebSocket server must be initialized via `/api/socketio` endpoint before webhooks can broadcast events:
+```bash
+curl http://localhost:3000/api/socketio
+```
+
 ## UI Component System
 
 Built on Radix UI + Tailwind with custom component library:
 - **Design System**: Professional green theme for legal market
 - **Responsive Dashboard**: Real-time metrics with Recharts
 - **Lead Management**: Classification badges, scoring visualizations
-- **Conversation Interface**: WhatsApp-style chat interface
+- **Conversation Interface**: WhatsApp-style chat interface with real-time message updates
 - **Instance Management UI**: `/whatsapp` page with phone number display and connection history
   - Shows instance name + formatted phone number
   - Displays connection history when instances are reused
   - QR code generation and real-time status updates
   - Visual indicators for reconnection vs new connection
+- **Real-time Indicators**: WebSocket connection status displayed throughout the interface
 
 ### Layout Architecture
 The system uses Next.js Route Groups for consistent navigation:
@@ -135,6 +170,7 @@ The webhook handler (`/api/webhook/evolution`) contains sophisticated text analy
 - Identifies urgency keywords and geographic information
 - Updates lead scores in real-time
 - Triggers appropriate bot responses based on classification
+- Broadcasts all message updates via WebSocket for real-time interface updates
 
 ### Bot Response Logic
 Contextual responses based on:
@@ -167,3 +203,14 @@ MongoDB schemas use string references instead of ObjectId for TypeScript compati
 ## Testing and Deployment
 
 The system includes mock data fallbacks for development and can be tested locally with the admin user created by `scripts/create-admin.js`. Production deployment requires proper MongoDB and Evolution API configuration.
+
+### Development Setup
+1. Start the development server: `npm run dev`
+2. Initialize WebSocket server: `curl http://localhost:3000/api/socketio`
+3. Configure Evolution API webhook to point to your domain: `{domain}/api/webhook/evolution`
+4. Test real-time messaging by sending WhatsApp messages to connected instances
+
+### Real-time System Dependencies
+- **Socket.IO**: Real-time WebSocket communication (`socket.io`, `socket.io-client`)
+- **WebSocket Server**: Must be initialized before webhook events for proper message broadcasting
+- **Client Connection**: Browsers automatically connect to WebSocket server on conversation page load
