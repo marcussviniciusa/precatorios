@@ -45,7 +45,8 @@ The system's core functionality revolves around automatic lead scoring and class
 5. **Message Processing**: Extracts information (values, states, urgency keywords)
 6. **Lead Scoring**: Automatically calculates and updates lead scores
 7. **Bot Response**: Contextual automatic responses based on qualification
-8. **Transfer Logic**: Routes high-scoring leads to human agents
+8. **Real-time Broadcasting**: Messages instantly broadcast via WebSocket to connected clients
+9. **Transfer Logic**: Routes high-scoring leads to human agents
 
 ### Data Models Architecture
 Key entities (`src/types/index.ts`, `src/models/`):

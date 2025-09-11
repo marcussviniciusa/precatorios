@@ -27,18 +27,25 @@ export interface InstanceStatusChangedEvent {
   phoneNumber?: string
 }
 
-// Global instance for the socket server
-let io: Server | null = null
+// Global variable declaration for proper singleton
+declare global {
+  var __socketio: Server | undefined
+}
+
+// Global instance for the socket server - using global to prevent re-initialization
+const globalForSocket = globalThis as unknown as {
+  socketio: Server | undefined
+}
 
 export const getSocketServer = (): Server | null => {
-  return io
+  return globalForSocket.socketio || null
 }
 
 export const initializeSocketServer = (res: NextApiResponse): Server => {
-  if (!io) {
+  if (!globalForSocket.socketio) {
     const httpServer = (res.socket as any).server
     
-    io = new Server(httpServer, {
+    globalForSocket.socketio = new Server(httpServer, {
       path: '/api/socketio',
       cors: {
         origin: process.env.NEXTAUTH_URL || 'http://localhost:3000',
@@ -47,7 +54,7 @@ export const initializeSocketServer = (res: NextApiResponse): Server => {
       transports: ['polling', 'websocket']
     })
 
-    io.on('connection', (socket) => {
+    globalForSocket.socketio.on('connection', (socket) => {
       console.log('Client connected to WebSocket:', socket.id)
       
       // Join conversation rooms for targeted updates
@@ -70,20 +77,12 @@ export const initializeSocketServer = (res: NextApiResponse): Server => {
     console.log('Socket.IO server initialized')
   }
   
-  return io
-}
-
-// Initialize the socket server for App Router compatibility
-export const ensureSocketServer = () => {
-  if (!io && typeof window === 'undefined') {
-    // This is a workaround for App Router - we'll initialize through the API endpoint
-    console.log('Socket server not initialized, will initialize on first client connection')
-  }
+  return globalForSocket.socketio
 }
 
 // Emit events to all connected clients
 export const broadcastNewMessage = (conversationId: string, message: any) => {
-  ensureSocketServer()
+  const io = globalForSocket.socketio
   if (io) {
     // Send to specific conversation room
     io.to(`conversation:${conversationId}`).emit('new-message', {
@@ -105,7 +104,7 @@ export const broadcastNewMessage = (conversationId: string, message: any) => {
 }
 
 export const broadcastConversationUpdated = (conversationId: string, conversation: any) => {
-  ensureSocketServer()
+  const io = globalForSocket.socketio
   if (io) {
     io.emit('conversation-updated', {
       conversationId,
@@ -118,7 +117,7 @@ export const broadcastConversationUpdated = (conversationId: string, conversatio
 }
 
 export const broadcastConversationDeleted = (conversationId: string) => {
-  ensureSocketServer()
+  const io = globalForSocket.socketio
   if (io) {
     io.emit('conversation-deleted', {
       conversationId
@@ -130,7 +129,7 @@ export const broadcastConversationDeleted = (conversationId: string) => {
 }
 
 export const broadcastInstanceStatusChanged = (instanceName: string, status: string, phoneNumber?: string) => {
-  ensureSocketServer()
+  const io = globalForSocket.socketio
   if (io) {
     io.emit('instance-status-changed', {
       instanceName,
