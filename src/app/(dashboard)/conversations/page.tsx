@@ -14,7 +14,10 @@ import {
   RefreshCw,
   Paperclip,
   Image,
-  File
+  File,
+  Smartphone,
+  AlertTriangle,
+  CheckCircle
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -47,6 +50,15 @@ interface ConversationDetails {
   messages: ConversationMessage[]
 }
 
+interface InstanceInfo {
+  instanceName: string
+  phoneNumber?: string
+  profileName?: string
+  profilePicUrl?: string
+  state: string
+  isMatched: boolean
+}
+
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState<ConversationListItem[]>([])
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
@@ -57,6 +69,8 @@ export default function ConversationsPage() {
   const [sendingMessage, setSendingMessage] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [showFileMenu, setShowFileMenu] = useState(false)
+  const [instanceInfo, setInstanceInfo] = useState<InstanceInfo | null>(null)
+  const [instanceError, setInstanceError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -89,6 +103,29 @@ export default function ConversationsPage() {
     }
   }, [conversationDetails?.messages])
 
+  // Buscar informações da instância para uma conversa
+  const fetchInstanceInfo = async (conversationId: string) => {
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}/instance`)
+      if (response.ok) {
+        const data = await response.json()
+        setInstanceInfo(data.instance)
+        if (data.warning) {
+          setInstanceError(data.warning)
+        } else {
+          setInstanceError(null)
+        }
+      } else {
+        setInstanceInfo(null)
+        setInstanceError('Erro ao carregar informações da instância')
+      }
+    } catch (error) {
+      console.error('Erro ao buscar instância:', error)
+      setInstanceInfo(null)
+      setInstanceError('Erro ao conectar com a instância')
+    }
+  }
+
   // Carregar mensagens de uma conversa específica
   const fetchConversationMessages = async (conversationId: string) => {
     try {
@@ -97,6 +134,9 @@ export default function ConversationsPage() {
       if (response.ok) {
         const data = await response.json()
         setConversationDetails(data.conversation)
+        
+        // Buscar informações da instância
+        await fetchInstanceInfo(conversationId)
         
         // Marcar mensagens como lidas
         await fetch(`/api/conversations/${conversationId}/read`, {
@@ -135,6 +175,12 @@ export default function ConversationsPage() {
   const sendMessage = async () => {
     if ((!newMessage.trim() && !selectedFile) || !selectedConversation || sendingMessage) return
     
+    // Verificar se temos informações da instância
+    if (!instanceInfo) {
+      setInstanceError('Nenhuma instância ativa encontrada para esta conversa')
+      return
+    }
+    
     try {
       setSendingMessage(true)
       
@@ -143,7 +189,7 @@ export default function ConversationsPage() {
         const formData = new FormData()
         formData.append('file', selectedFile)
         formData.append('message', newMessage || '')
-        formData.append('instanceName', 'teste2') // usar instância correta
+        formData.append('instanceName', instanceInfo.instanceName)
         
         const response = await fetch(`/api/conversations/${selectedConversation}/send-media`, {
           method: 'POST',
@@ -174,7 +220,7 @@ export default function ConversationsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: newMessage,
-            instanceName: 'teste2' // usar instância correta
+            instanceName: instanceInfo.instanceName
           })
         })
 
@@ -338,13 +384,58 @@ export default function ConversationsPage() {
         <Card className="lg:col-span-2 flex flex-col overflow-hidden">
           <CardHeader className="flex-shrink-0">
             <CardTitle className="flex items-center justify-between">
-              {selectedConversation ? (
-                <span>
-                  Conversa com {conversationDetails?.leadId?.name || 'Carregando...'}
-                </span>
-              ) : (
-                <span>Selecione uma conversa</span>
-              )}
+              <div className="flex flex-col">
+                {selectedConversation ? (
+                  <div>
+                    <span className="text-lg font-semibold">
+                      Conversa com {conversationDetails?.leadId?.name || 'Carregando...'}
+                    </span>
+                    
+                    {/* Informações da instância */}
+                    <div className="flex items-center space-x-2 mt-1">
+                      {instanceInfo ? (
+                        <div className="flex items-center space-x-2 text-sm text-gray-600">
+                          {instanceInfo.profilePicUrl ? (
+                            <img 
+                              src={instanceInfo.profilePicUrl} 
+                              alt="WhatsApp" 
+                              className="w-4 h-4 rounded-full"
+                            />
+                          ) : (
+                            <Smartphone className="w-4 h-4" />
+                          )}
+                          <span>
+                            {instanceInfo.profileName || instanceInfo.instanceName}
+                            {instanceInfo.phoneNumber && (
+                              <span className="text-gray-500 ml-1">
+                                ({instanceInfo.phoneNumber.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '+$1 ($2) $3-$4')})
+                              </span>
+                            )}
+                          </span>
+                          {instanceInfo.isMatched ? (
+                            <CheckCircle className="w-3 h-3 text-green-500" title="Instância correspondente ao número" />
+                          ) : (
+                            <AlertTriangle className="w-3 h-3 text-yellow-500" title="Usando instância alternativa" />
+                          )}
+                        </div>
+                      ) : instanceError ? (
+                        <div className="flex items-center space-x-1 text-sm text-red-600">
+                          <AlertTriangle className="w-4 h-4" />
+                          <span>{instanceError}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-1 text-sm text-gray-500">
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          <span>Carregando instância...</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <span>Selecione uma conversa</span>
+                )}
+              </div>
+              
               {selectedConversation && (
                 <div className="flex space-x-2">
                   <Button variant="outline" size="sm">
@@ -501,6 +592,14 @@ export default function ConversationsPage() {
                 </div>
                 
                 <div className="flex-shrink-0 space-y-2">
+                  {/* Aviso de erro de instância */}
+                  {instanceError && !instanceInfo && (
+                    <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-sm">{instanceError}</span>
+                    </div>
+                  )}
+                  
                   {/* Preview do arquivo selecionado */}
                   {selectedFile && (
                     <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded-lg">
@@ -572,7 +671,8 @@ export default function ConversationsPage() {
                     <Button 
                       size="sm" 
                       onClick={sendMessage}
-                      disabled={(!newMessage.trim() && !selectedFile) || sendingMessage}
+                      disabled={(!newMessage.trim() && !selectedFile) || sendingMessage || !instanceInfo}
+                      title={!instanceInfo ? 'Nenhuma instância ativa encontrada' : ''}
                     >
                       {sendingMessage ? (
                         <RefreshCw className="w-4 h-4 animate-spin" />
