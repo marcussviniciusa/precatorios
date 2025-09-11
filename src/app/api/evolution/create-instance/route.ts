@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import dbConnect from '@/lib/mongodb'
+import WhatsAppInstance from '@/models/WhatsAppInstance'
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,9 +95,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Salvar instância no banco de dados local
+    await dbConnect()
+    
+    const newInstance = await WhatsAppInstance.create({
+      instanceName: body.instanceName,
+      state: 'close',
+      integration: 'WHATSAPP-BAILEYS',
+      webhookUrl: instanceData.webhook?.url,
+      isActive: true,
+      createdBy: 'system' // TODO: usar usuário autenticado quando implementado
+    })
+
     return NextResponse.json({
       success: true,
-      instance: data.instance,
+      instance: {
+        instanceName: newInstance.instanceName,
+        state: newInstance.state,
+        integration: newInstance.integration
+      },
       hash: data.hash,
       settings: data.settings
     })

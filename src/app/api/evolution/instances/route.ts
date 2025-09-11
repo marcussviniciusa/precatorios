@@ -1,53 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import dbConnect from '@/lib/mongodb'
+import WhatsAppInstance from '@/models/WhatsAppInstance'
 
 export async function GET(request: NextRequest) {
   try {
-    const evolutionApiUrl = process.env.EVOLUTION_API_URL
-    const evolutionApiKey = process.env.EVOLUTION_API_KEY
+    await dbConnect()
+    
+    // Buscar apenas instâncias criadas por este sistema
+    const instances = await WhatsAppInstance.find({ isActive: true })
+      .sort({ createdAt: -1 })
+      .lean()
 
-    if (!evolutionApiUrl || !evolutionApiKey) {
-      return NextResponse.json(
-        { error: 'Configuração da Evolution API não encontrada' },
-        { status: 500 }
-      )
-    }
-
-    const response = await fetch(`${evolutionApiUrl}/instance/fetchInstances`, {
-      method: 'GET',
-      headers: {
-        'apikey': evolutionApiKey
-      },
-      cache: 'no-store'
-    })
-
-    const responseText = await response.text()
-    console.log('Fetch instances response:', responseText)
-
-    let data
-    try {
-      data = JSON.parse(responseText)
-    } catch (e) {
-      console.error('Error parsing response:', e)
-      return NextResponse.json(
-        { error: 'Resposta inválida da Evolution API' },
-        { status: 500 }
-      )
-    }
-
-    if (!response.ok) {
-      console.error('Evolution API error:', data)
-      return NextResponse.json(
-        { error: data.message || 'Erro ao buscar instâncias' },
-        { status: response.status }
-      )
-    }
-
-    // Map Evolution API response to our format
-    const instances = Array.isArray(data) ? data : data.response || []
+    // Mapear para o formato esperado pelo frontend
     const mappedInstances = instances.map((instance: any) => ({
-      instanceName: instance.name,
-      state: instance.connectionStatus,
-      status: instance.connectionStatus,
+      instanceName: instance.instanceName,
+      state: instance.state,
+      status: instance.state,
       ownerJid: instance.ownerJid,
       profileName: instance.profileName,
       profilePicUrl: instance.profilePicUrl,

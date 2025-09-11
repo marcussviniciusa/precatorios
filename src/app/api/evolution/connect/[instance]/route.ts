@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import dbConnect from '@/lib/mongodb'
+import WhatsAppInstance from '@/models/WhatsAppInstance'
 
 export async function GET(
   request: NextRequest,
@@ -8,6 +10,20 @@ export async function GET(
     const { instance } = params
     const { searchParams } = new URL(request.url)
     const number = searchParams.get('number')
+    
+    // Verificar se a instância existe no banco local
+    await dbConnect()
+    const localInstance = await WhatsAppInstance.findOne({ 
+      instanceName: instance, 
+      isActive: true 
+    })
+    
+    if (!localInstance) {
+      return NextResponse.json(
+        { error: 'Instância não encontrada' },
+        { status: 404 }
+      )
+    }
 
     const evolutionApiUrl = process.env.EVOLUTION_API_URL
     const evolutionApiKey = process.env.EVOLUTION_API_KEY
@@ -54,6 +70,13 @@ export async function GET(
         { status: response.status }
       )
     }
+
+    // Atualizar estado para connecting no banco local
+    await WhatsAppInstance.findOneAndUpdate(
+      { instanceName: instance },
+      { state: 'connecting' },
+      { new: true }
+    )
 
     return NextResponse.json({
       success: true,

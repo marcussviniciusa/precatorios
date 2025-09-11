@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import dbConnect from '@/lib/mongodb'
+import WhatsAppInstance from '@/models/WhatsAppInstance'
 
 export async function GET(
   request: NextRequest,
@@ -47,9 +49,27 @@ export async function GET(
       )
     }
 
+    // Atualizar status no banco de dados local
+    await dbConnect()
+    
+    const instanceData = data.instance || data
+    const connectionState = instanceData.state || instanceData.connectionStatus || 'close'
+    
+    await WhatsAppInstance.findOneAndUpdate(
+      { instanceName: instance },
+      { 
+        state: connectionState,
+        ownerJid: instanceData.ownerJid,
+        profileName: instanceData.profileName,
+        profilePicUrl: instanceData.profilePicUrl,
+        ...(connectionState === 'open' && { lastConnectionAt: new Date() })
+      },
+      { new: true }
+    )
+
     return NextResponse.json({
       success: true,
-      instance: data.instance || data
+      instance: instanceData
     })
 
   } catch (error) {

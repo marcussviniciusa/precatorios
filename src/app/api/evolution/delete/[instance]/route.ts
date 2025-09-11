@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import dbConnect from '@/lib/mongodb'
+import WhatsAppInstance from '@/models/WhatsAppInstance'
 
 export async function DELETE(
   request: NextRequest,
@@ -45,6 +47,15 @@ export async function DELETE(
         { status: response.status }
       )
     }
+
+    // Remover instância do banco de dados local
+    await dbConnect()
+    
+    await WhatsAppInstance.findOneAndUpdate(
+      { instanceName: instance },
+      { isActive: false },
+      { new: true }
+    )
 
     return NextResponse.json({
       success: true,
