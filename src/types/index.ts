@@ -103,7 +103,8 @@ export interface BotConfig {
     enabled: boolean
     provider: string
     apiKey?: string
-    model: string
+    analysisModel?: string
+    responseModel?: string
     prompts: {
       extraction: string
       scoring: string

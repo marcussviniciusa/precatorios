@@ -28,12 +28,14 @@ interface TransferDecision {
 
 export class PrecatoriosAI {
   private apiKey: string
-  private model: string
+  private analysisModel: string
+  private responseModel: string
   private baseUrl = 'https://openrouter.ai/api/v1/chat/completions'
 
-  constructor(apiKey: string, model: string = 'openai/gpt-4-turbo-preview') {
+  constructor(apiKey: string, analysisModel: string, responseModel: string) {
     this.apiKey = apiKey
-    this.model = model
+    this.analysisModel = analysisModel
+    this.responseModel = responseModel
   }
 
   private cleanJsonResponse(response: string): string {
@@ -56,7 +58,7 @@ export class PrecatoriosAI {
     return jsonStr.trim()
   }
 
-  private async callOpenRouter(prompt: string, systemPrompt: string): Promise<any> {
+  private async callOpenRouter(prompt: string, systemPrompt: string, model: string): Promise<any> {
     try {
       const response = await fetch(this.baseUrl, {
         method: 'POST',
@@ -67,7 +69,7 @@ export class PrecatoriosAI {
           'X-Title': 'Precatorios Bot'
         },
         body: JSON.stringify({
-          model: this.model,
+          model: model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: prompt }
@@ -115,7 +117,7 @@ export class PrecatoriosAI {
     Extraia as informações em formato JSON.`
 
     try {
-      const response = await this.callOpenRouter(prompt, systemPrompt)
+      const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel)
       const cleanJson = this.cleanJsonResponse(response)
       return JSON.parse(cleanJson)
     } catch (error) {
@@ -151,7 +153,7 @@ export class PrecatoriosAI {
     Calcule o score e classificação.`
 
     try {
-      const response = await this.callOpenRouter(prompt, systemPrompt)
+      const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel)
       const cleanJson = this.cleanJsonResponse(response)
       return JSON.parse(cleanJson)
     } catch (error) {
@@ -188,7 +190,7 @@ export class PrecatoriosAI {
     Deve transferir para humano?`
 
     try {
-      const response = await this.callOpenRouter(prompt, systemPrompt)
+      const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel)
       const cleanJson = this.cleanJsonResponse(response)
       return JSON.parse(cleanJson)
     } catch (error) {
@@ -234,7 +236,7 @@ export class PrecatoriosAI {
     Gere uma resposta apropriada.`
 
     try {
-      const response = await this.callOpenRouter(prompt, systemPrompt)
+      const response = await this.callOpenRouter(prompt, systemPrompt, this.responseModel)
       return response.trim()
     } catch (error) {
       console.error('Error generating response:', error)
@@ -252,9 +254,15 @@ export class PrecatoriosAI {
         return null
       }
 
+      if (!config.aiConfig.analysisModel || !config.aiConfig.responseModel) {
+        console.log('AI models not configured')
+        return null
+      }
+
       return new PrecatoriosAI(
         config.aiConfig.apiKey,
-        config.aiConfig.model || 'openai/gpt-4-turbo-preview'
+        config.aiConfig.analysisModel,
+        config.aiConfig.responseModel
       )
     } catch (error) {
       console.error('Error getting AI instance:', error)

@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
           enabled: false,
           provider: 'openrouter',
           apiKey: '',
-          model: 'openai/gpt-4-turbo-preview',
+          analysisModel: '',
+          responseModel: '',
           prompts: {
             extraction: 'Extraia informações sobre precatórios da mensagem: nome, valor, estado, urgência, tipo.',
             scoring: 'Calcule o score do lead baseado nas informações: precatório confirmado (+40), valor elegível (+20), estado válido (+10), urgência (+15), documentos (+10), interesse (+5).',

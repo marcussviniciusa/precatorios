@@ -13,16 +13,6 @@ import { Brain, Settings, MessageSquare, Target, Zap, Save, Loader2 } from 'luci
 import { getAuthHeaders } from '@/lib/client-auth'
 import type { BotConfig } from '@/types'
 
-const OPENROUTER_MODELS = [
-  { id: 'openai/gpt-4-turbo-preview', name: 'GPT-4 Turbo' },
-  { id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
-  { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus' },
-  { id: 'anthropic/claude-3-sonnet', name: 'Claude 3 Sonnet' },
-  { id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku' },
-  { id: 'google/gemini-pro', name: 'Gemini Pro' },
-  { id: 'mistral/mistral-large', name: 'Mistral Large' },
-  { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B' }
-]
 
 export default function AIConfigPage() {
   const [config, setConfig] = useState<BotConfig | null>(null)
@@ -213,22 +203,29 @@ export default function AIConfigPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="model">Modelo</Label>
-              <Select
-                value={config.aiConfig?.model || 'openai/gpt-4-turbo-preview'}
-                onValueChange={(value) => updateAIConfig('model', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {OPENROUTER_MODELS.map(model => (
-                    <SelectItem key={model.id} value={model.id}>
-                      {model.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="analysisModel">Modelo para Análise (extração, scoring, transferência)</Label>
+              <Input
+                id="analysisModel"
+                placeholder="Ex: openai/gpt-4-turbo-preview"
+                value={config.aiConfig?.analysisModel || ''}
+                onChange={(e) => updateAIConfig('analysisModel', e.target.value)}
+              />
+              <p className="text-sm text-gray-600">
+                Use tags do OpenRouter como: openai/gpt-4-turbo-preview, anthropic/claude-3-opus, etc.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="responseModel">Modelo para Resposta (conversação com cliente)</Label>
+              <Input
+                id="responseModel"
+                placeholder="Ex: openai/gpt-3.5-turbo"
+                value={config.aiConfig?.responseModel || ''}
+                onChange={(e) => updateAIConfig('responseModel', e.target.value)}
+              />
+              <p className="text-sm text-gray-600">
+                Use tags do OpenRouter. Pode ser um modelo mais rápido/barato para conversação.
+              </p>
             </div>
           </div>
 

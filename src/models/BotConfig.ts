@@ -60,7 +60,8 @@ const BotConfigSchema = new Schema<BotConfig>({
     enabled: { type: Boolean, default: false },
     provider: { type: String, default: 'openrouter' },
     apiKey: String,
-    model: { type: String, default: 'openai/gpt-4-turbo-preview' },
+    analysisModel: String,
+    responseModel: String,
     prompts: {
       extraction: {
         type: String,
