@@ -68,6 +68,8 @@ export interface Message {
     quotedMessage?: string
     mediaUrl?: string
     fileName?: string
+    mimetype?: string
+    transcription?: string // Para áudios transcritos
   }
 }
 

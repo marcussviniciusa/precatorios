@@ -18,7 +18,11 @@ import {
   Smartphone,
   AlertTriangle,
   CheckCircle,
-  Trash2
+  Trash2,
+  Eye,
+  EyeOff,
+  FileText,
+  Loader2
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -28,14 +32,22 @@ interface AudioMessageProps {
   audioUrl: string
   mimetype?: string
   isFromUser: boolean
+  transcription?: string
+  conversationId: string
+  messageId: string
+  onTranscriptionUpdate?: (transcription: string) => void
 }
 
-const AudioMessage = ({ audioUrl, mimetype, isFromUser }: AudioMessageProps) => {
+const AudioMessage = ({ audioUrl, mimetype, isFromUser, transcription, conversationId, messageId, onTranscriptionUpdate }: AudioMessageProps) => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState<number | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
+  const [showTranscription, setShowTranscription] = useState(false)
+  const [currentTranscription, setCurrentTranscription] = useState(transcription)
+  const [isTranscribing, setIsTranscribing] = useState(false)
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
@@ -122,6 +134,37 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser }: AudioMessageProps) => 
     setCurrentTime(newTime)
   }
 
+  const handleTranscribe = async () => {
+    setIsTranscribing(true)
+    setTranscriptionError(null)
+
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}/transcribe-audio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messageId
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setCurrentTranscription(data.transcription)
+        setShowTranscription(true)
+        onTranscriptionUpdate?.(data.transcription)
+      } else {
+        setTranscriptionError(data.error || 'Erro ao transcrever áudio')
+      }
+    } catch (error) {
+      setTranscriptionError('Erro de conexão ao transcrever áudio')
+    } finally {
+      setIsTranscribing(false)
+    }
+  }
+
   if (hasError) {
     return (
       <div className="flex items-center space-x-3 p-3 bg-gray-100 rounded-lg max-w-[280px]">
@@ -178,9 +221,37 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser }: AudioMessageProps) => 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
           <p className="text-sm font-medium text-gray-700">Áudio</p>
-          <span className="text-xs text-gray-500">
-            {formatTime(currentTime)} / {duration ? formatTime(duration) : '--:--'}
-          </span>
+          <div className="flex items-center space-x-2">
+            {currentTranscription ? (
+              <button
+                onClick={() => setShowTranscription(!showTranscription)}
+                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                title={showTranscription ? "Ocultar transcrição" : "Ver transcrição"}
+              >
+                {showTranscription ? (
+                  <EyeOff className="w-3 h-3 text-gray-600" />
+                ) : (
+                  <Eye className="w-3 h-3 text-gray-600" />
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={handleTranscribe}
+                disabled={isTranscribing}
+                className="p-1 hover:bg-gray-200 rounded transition-colors disabled:opacity-50"
+                title={isTranscribing ? "Transcrevendo..." : "Transcrever áudio"}
+              >
+                {isTranscribing ? (
+                  <Loader2 className="w-3 h-3 text-gray-600 animate-spin" />
+                ) : (
+                  <FileText className="w-3 h-3 text-gray-600" />
+                )}
+              </button>
+            )}
+            <span className="text-xs text-gray-500">
+              {formatTime(currentTime)} / {duration ? formatTime(duration) : '--:--'}
+            </span>
+          </div>
         </div>
         
         <div 
@@ -196,9 +267,24 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser }: AudioMessageProps) => 
           />
         </div>
         
+        {showTranscription && currentTranscription && (
+          <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-700 border-l-2 border-blue-400">
+            <div className="font-medium text-blue-600 mb-1">Transcrição:</div>
+            <div className="whitespace-pre-wrap">{currentTranscription}</div>
+          </div>
+        )}
+
+        {transcriptionError && (
+          <div className="mt-2 p-2 bg-red-50 rounded text-xs text-red-700 border-l-2 border-red-400">
+            <div className="font-medium text-red-600 mb-1">Erro:</div>
+            <div>{transcriptionError}</div>
+          </div>
+        )}
+        
         {mimetype && (
           <p className="text-xs text-gray-400 mt-1 truncate">
             {mimetype.replace('audio/', '').toUpperCase()}
+            {currentTranscription && <span className="ml-1">• Transcrição disponível</span>}
           </p>
         )}
       </div>
@@ -231,6 +317,7 @@ interface ConversationMessage {
     mediaUrl?: string
     fileName?: string
     mimetype?: string
+    transcription?: string
   }
 }
 
@@ -884,6 +971,21 @@ export default function ConversationsPage() {
                                   audioUrl={message.metadata.mediaUrl}
                                   mimetype={message.metadata?.mimetype}
                                   isFromUser={message.sender === 'user'}
+                                  transcription={message.metadata?.transcription}
+                                  conversationId={selectedConversation}
+                                  messageId={message._id}
+                                  onTranscriptionUpdate={(transcription) => {
+                                    // Atualizar o estado local da mensagem
+                                    setConversationDetails(prev => {
+                                      if (!prev) return prev
+                                      const updatedMessages = prev.messages.map(msg => 
+                                        msg._id === message._id 
+                                          ? { ...msg, metadata: { ...msg.metadata, transcription } }
+                                          : msg
+                                      )
+                                      return { ...prev, messages: updatedMessages }
+                                    })
+                                  }}
                                 />
                               ) : (
                                 <div className="flex items-center space-x-3 p-3 bg-gray-100 rounded-lg max-w-[280px]">

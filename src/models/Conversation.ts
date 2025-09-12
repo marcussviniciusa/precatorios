@@ -21,7 +21,9 @@ const MessageSchema = new Schema<Message>({
     messageId: String,
     quotedMessage: String,
     mediaUrl: String,
-    fileName: String
+    fileName: String,
+    mimetype: String,
+    transcription: String // Para áudios transcritos
   }
 }, {
   _id: true

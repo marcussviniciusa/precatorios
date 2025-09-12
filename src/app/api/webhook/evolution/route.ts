@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
                         message.message?.audioMessage?.mimetype
 
         let minioUrl: string | undefined
+        let transcription: string | undefined
 
         // Se há URL de mídia, baixar usando Evolution API (decodificado) e salvar no MinIO
         if (whatsappMediaUrl) {
@@ -179,13 +180,20 @@ export async function POST(request: NextRequest) {
                     )
                     
                     if (extractedText) {
-                      // Adicionar texto extraído ao messageText
-                      messageText = messageText === '[Imagem enviada]' || 
-                                   messageText === '[Áudio enviado]' || 
-                                   messageText === '[Vídeo enviado]' ||
-                                   messageText.startsWith('[Documento:') 
-                                   ? extractedText 
-                                   : `${messageText}\n\n[Texto extraído]:\n${extractedText}`
+                      // Para áudios, manter o texto original e salvar transcrição separadamente
+                      if (messageType === 'audio') {
+                        // Salvar transcrição na metadata para exibir no botão
+                        transcription = extractedText
+                        // Para a IA, usar o texto transcrito
+                        messageText = extractedText
+                      } else {
+                        // Para imagens e documentos, substituir o texto
+                        messageText = messageText === '[Imagem enviada]' || 
+                                     messageText === '[Vídeo enviado]' ||
+                                     messageText.startsWith('[Documento:') 
+                                     ? extractedText 
+                                     : `${messageText}\n\n[Texto extraído]:\n${extractedText}`
+                      }
                       
                       console.log(`Extracted text from ${messageType}: ${extractedText.substring(0, 100)}...`)
                     }
@@ -223,7 +231,8 @@ export async function POST(request: NextRequest) {
             messageId: message.key.id,
             mediaUrl: minioUrl || whatsappMediaUrl, // Priorizar MinIO, fallback para WhatsApp
             fileName,
-            mimetype
+            mimetype,
+            transcription // Salvar transcrição para áudios
           }
         }
 
