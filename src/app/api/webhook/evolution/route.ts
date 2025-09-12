@@ -7,6 +7,11 @@ import { calculateLeadScore, getLeadClassification } from '@/lib/utils'
 import { broadcastNewMessage, broadcastConversationUpdated } from '@/lib/websocket'
 import { uploadBufferToMinio } from '@/lib/minio'
 
+// Mapa global para controlar timeouts de processamento por conversa
+const processingTimeouts = new Map<string, NodeJS.Timeout>()
+// Mapa para controlar se uma conversa está sendo processada (evitar race conditions)
+const processingLocks = new Map<string, boolean>()
+
 export async function POST(request: NextRequest) {
   try {
     await dbConnect()
@@ -184,8 +189,8 @@ export async function POST(request: NextRequest) {
         lead.lastInteraction = new Date()
         await lead.save()
 
-        // Processar mensagem com IA
-        await processMessageWithAI(messageText, lead, conversation, instance)
+        // Processar mensagem com IA usando debounce para agrupar mensagens consecutivas
+        await scheduleAIProcessing(lead, conversation, instance)
       }
     }
 
@@ -198,6 +203,86 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+async function scheduleAIProcessing(
+  lead: any, 
+  conversation: any,
+  instanceName: string
+) {
+  const conversationId = conversation._id.toString()
+  
+  // Buscar configuração para obter delay
+  const config = await BotConfig.findOne().sort({ updatedAt: -1 })
+  const delay = config?.aiConfig?.settings?.messageGroupingDelay || 3000
+  
+  // Cancelar timeout anterior se existir
+  if (processingTimeouts.has(conversationId)) {
+    clearTimeout(processingTimeouts.get(conversationId)!)
+    console.log(`Cancelled previous AI processing for conversation ${conversationId}`)
+  }
+  
+  // Criar um timestamp único para esta execução
+  const executionId = Date.now() + Math.random()
+  
+  // Agendar novo processamento
+  const timeout = setTimeout(async () => {
+    console.log(`Processing grouped messages for conversation ${conversationId} after ${delay}ms delay (exec: ${executionId})`)
+    
+    // Verificar se este timeout ainda é o válido (não foi cancelado)
+    if (processingTimeouts.get(conversationId) !== timeout) {
+      console.log(`Execution ${executionId} was cancelled, skipping`)
+      return
+    }
+    
+    // Verificar se já está sendo processado (evitar race condition)
+    if (processingLocks.get(conversationId)) {
+      console.log(`Conversation ${conversationId} already being processed, skipping (exec: ${executionId})`)
+      processingTimeouts.delete(conversationId)
+      return
+    }
+    
+    // Marcar como sendo processado
+    processingLocks.set(conversationId, true)
+    
+    try {
+      // Buscar conversa atualizada com todas as mensagens
+      await dbConnect()
+      const updatedConversation = await Conversation.findById(conversationId)
+      const updatedLead = await Lead.findById(lead._id)
+      
+      if (updatedConversation && updatedLead) {
+        // Pegar últimas mensagens não processadas do usuário  
+        const maxMessages = config?.aiConfig?.settings?.maxMessagesToGroup || 5
+        const userMessagesArray = updatedConversation.messages
+          .filter((msg: any) => msg.sender === 'user')
+          .slice(-maxMessages)
+        
+        const userMessages = userMessagesArray
+          .map((msg: any) => msg.content)
+          .join(' ')
+        
+        console.log(`Actually processing with IA for conversation ${conversationId} (exec: ${executionId})`)
+        console.log(`User messages found: ${userMessagesArray.length}`)
+        console.log(`Messages content: [${userMessagesArray.map(m => `"${m.content}"`).join(', ')}]`)
+        console.log(`Grouped message: "${userMessages}"`)
+        
+        // Processar com IA usando mensagens agrupadas
+        await processMessageWithAI(userMessages, updatedLead, updatedConversation, instanceName)
+      }
+    } catch (error) {
+      console.error('Error in scheduled AI processing:', error)
+    } finally {
+      // Remover locks e timeout do mapa
+      processingLocks.delete(conversationId)
+      processingTimeouts.delete(conversationId)
+      console.log(`Finished processing conversation ${conversationId} (exec: ${executionId})`)
+    }
+  }, delay)
+  
+  // Salvar timeout no mapa
+  processingTimeouts.set(conversationId, timeout)
+  console.log(`Scheduled AI processing for conversation ${conversationId} in ${delay}ms (exec: ${executionId})`)
 }
 
 async function processMessageWithAI(

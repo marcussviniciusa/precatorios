@@ -413,6 +413,39 @@ export default function AIConfigPage() {
               </p>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="messageGroupingDelay">Delay para Agrupamento (ms)</Label>
+              <Input
+                id="messageGroupingDelay"
+                type="number"
+                min="1000"
+                max="10000"
+                step="500"
+                value={config.aiConfig?.settings?.messageGroupingDelay || 3000}
+                onChange={(e) => updateAISetting('messageGroupingDelay', parseInt(e.target.value))}
+              />
+              <p className="text-sm text-gray-600">
+                Tempo de espera para agrupar mensagens consecutivas (padrão: 3000ms)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="maxMessagesToGroup">Máximo de Mensagens por Grupo</Label>
+              <Input
+                id="maxMessagesToGroup"
+                type="number"
+                min="1"
+                max="10"
+                value={config.aiConfig?.settings?.maxMessagesToGroup || 5}
+                onChange={(e) => updateAISetting('maxMessagesToGroup', parseInt(e.target.value))}
+              />
+              <p className="text-sm text-gray-600">
+                Quantas mensagens consecutivas incluir no processamento (padrão: 5)
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -100,7 +100,9 @@ Regras importantes:
       autoScoring: { type: Boolean, default: true },
       autoTransfer: { type: Boolean, default: true },
       temperature: { type: Number, default: 0.3 },
-      maxTokens: { type: Number, default: 500 }
+      maxTokens: { type: Number, default: 500 },
+      messageGroupingDelay: { type: Number, default: 3000 },
+      maxMessagesToGroup: { type: Number, default: 5 }
     }
   },
   updatedBy: { type: String, ref: 'User' }
