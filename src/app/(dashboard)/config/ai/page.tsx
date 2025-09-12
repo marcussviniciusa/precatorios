@@ -76,8 +76,6 @@ export default function AIConfigPage() {
     setConfig({
       ...config,
       aiConfig: {
-        enabled: false,
-        provider: 'openrouter',
         ...config.aiConfig,
         [field]: value
       } as any
@@ -90,14 +88,8 @@ export default function AIConfigPage() {
     setConfig({
       ...config,
       aiConfig: {
-        enabled: false,
-        provider: 'openrouter',
         ...config.aiConfig,
         prompts: {
-          extraction: '',
-          scoring: '',
-          response: '',
-          transfer: '',
           ...config.aiConfig?.prompts,
           [promptType]: value
         }
@@ -108,23 +100,26 @@ export default function AIConfigPage() {
   const updateAISetting = (setting: string, value: any) => {
     if (!config) return
     
+    console.log(`Updating AI setting: ${setting} = ${value}`)
+    console.log('Current config:', config.aiConfig?.settings)
+    
     setConfig({
       ...config,
       aiConfig: {
-        enabled: false,
-        provider: 'openrouter',
         ...config.aiConfig,
         settings: {
-          autoExtraction: true,
-          autoScoring: true,
-          autoTransfer: true,
-          temperature: 0.3,
-          maxTokens: 500,
           ...config.aiConfig?.settings,
           [setting]: value
         }
       } as any
     })
+  }
+
+  const getSwitchValue = (setting: string, defaultValue: boolean = true): boolean => {
+    const value = config?.aiConfig?.settings?.[setting as keyof typeof config.aiConfig.settings]
+    const result = value !== undefined ? value : defaultValue
+    console.log(`getSwitchValue(${setting}) = ${result} (raw value: ${value})`)
+    return result
   }
 
   if (loading) {
@@ -348,7 +343,7 @@ export default function AIConfigPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center space-x-3">
               <Switch
-                checked={config.aiConfig?.settings?.autoExtraction || true}
+                checked={getSwitchValue('autoExtraction', true)}
                 onCheckedChange={(checked) => updateAISetting('autoExtraction', checked)}
               />
               <div>
@@ -361,7 +356,7 @@ export default function AIConfigPage() {
 
             <div className="flex items-center space-x-3">
               <Switch
-                checked={config.aiConfig?.settings?.autoScoring || true}
+                checked={getSwitchValue('autoScoring', true)}
                 onCheckedChange={(checked) => updateAISetting('autoScoring', checked)}
               />
               <div>
@@ -374,7 +369,7 @@ export default function AIConfigPage() {
 
             <div className="flex items-center space-x-3">
               <Switch
-                checked={config.aiConfig?.settings?.autoTransfer || true}
+                checked={getSwitchValue('autoTransfer', true)}
                 onCheckedChange={(checked) => updateAISetting('autoTransfer', checked)}
               />
               <div>

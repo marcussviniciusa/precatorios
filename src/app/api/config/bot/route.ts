@@ -10,53 +10,10 @@ export async function GET(request: NextRequest) {
     const config = await BotConfig.findOne().sort({ updatedAt: -1 })
     
     if (!config) {
-      // Return default config if none exists
-      const defaultConfig = {
-        isActive: true,
-        workingHours: {
-          start: '08:00',
-          end: '18:00',
-          timezone: 'America/Sao_Paulo'
-        },
-        prompts: {
-          welcome: 'Olá! 👋 Sou o assistente virtual especializado em precatórios. Como posso ajudá-lo hoje?',
-          qualification: 'Para melhor atendê-lo, preciso de algumas informações. Você possui algum precatório para receber?',
-          followUp: 'Obrigado pelas informações! Em breve um de nossos especialistas entrará em contato.',
-          transfer: 'Vou transferir você para um de nossos especialistas. Aguarde um momento...'
-        },
-        eligibilityRules: {
-          allowedStates: ['SP', 'RJ', 'MG', 'RS', 'PR', 'SC', 'BA', 'GO', 'DF', 'ES'],
-          minValue: 10000,
-          allowedTypes: ['federal', 'estadual', 'municipal', 'trabalhista']
-        },
-        transferRules: {
-          scoreThreshold: 60,
-          keywordTriggers: ['falar com humano', 'quero falar com alguém', 'atendente', 'urgente'],
-          maxBotResponses: 10
-        },
-        aiConfig: {
-          enabled: false,
-          provider: 'openrouter',
-          apiKey: '',
-          analysisModel: '',
-          responseModel: '',
-          prompts: {
-            extraction: 'Extraia informações sobre precatórios da mensagem: nome, valor, estado, urgência, tipo.',
-            scoring: 'Calcule o score do lead baseado nas informações: precatório confirmado (+40), valor elegível (+20), estado válido (+10), urgência (+15), documentos (+10), interesse (+5).',
-            response: 'Você é um assistente de precatórios. Seja cordial, direto e colete informações básicas. Máximo 3 linhas por resposta.',
-            transfer: 'Decida se deve transferir para humano baseado no score (>=60), urgência, solicitação explícita ou mais de 5 mensagens.'
-          },
-          settings: {
-            autoExtraction: true,
-            autoScoring: true,
-            autoTransfer: true,
-            temperature: 0.3,
-            maxTokens: 500
-          }
-        }
-      }
-      
-      return NextResponse.json(defaultConfig)
+      return NextResponse.json(
+        { error: 'Configuração não encontrada. Configure o bot primeiro.' },
+        { status: 404 }
+      )
     }
     
     return NextResponse.json(config)
