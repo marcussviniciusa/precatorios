@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # MongoDB Database for Development (apenas para desenvolvimento local)
+  mongodb:
+    image: mongo:7
+    container_name: precatorios-mongodb-dev
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: dev123
+      MONGO_INITDB_DATABASE: precatorios5_dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_dev_data:/data/db
+    networks:
+      - precatorios-dev-network
+
+  # MinIO Object Storage for Development
+  minio:
+    image: minio/minio:latest
+    container_name: precatorios-minio-dev
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: dev123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_dev_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - precatorios-dev-network
+
+  # Next.js Application for Development
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: precatorios-app-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:dev123@mongodb:27017/precatorios5_dev?authSource=admin
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: dev-secret-key-change-in-production
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      
+      # Evolution API Configuration
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-https://api.marcussviniciusa.cloud}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-your-evolution-api-key}
+      
+      # MinIO Configuration (Development)
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: false
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: dev123
+      MINIO_BUCKET_NAME: precatorios-files-dev
+      
+      # OpenAI Configuration (optional)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      
+      # Development specific
+      CHOKIDAR_USEPOLLING: true
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb
+      - minio
+    networks:
+      - precatorios-dev-network
+    volumes:
+      # Mount source code for hot reloading
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+
+volumes:
+  mongodb_dev_data:
+  minio_dev_data:
+
+networks:
+  precatorios-dev-network:
+    driver: bridge

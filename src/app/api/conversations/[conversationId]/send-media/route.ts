@@ -85,6 +85,9 @@ export async function POST(
         }
       )
 
+      // Declarar payload no escopo correto
+      let payload: any = null
+
       // Se FormData falhar, tentar com base64
       if (!evolutionResponse.ok) {
         console.log('FormData failed, trying base64...')
@@ -95,7 +98,7 @@ export async function POST(
         const base64 = buffer.toString('base64')
         
         // Preparar o payload JSON para Evolution API
-        const payload = {
+        payload = {
           number: lead.phone,
           mediatype: isImage ? 'image' : 'document',
           media: base64,
@@ -122,10 +125,12 @@ export async function POST(
           status: evolutionResponse.status,
           statusText: evolutionResponse.statusText,
           error: errorData,
-          payload: {
-            ...payload,
-            media: '[BASE64_TRUNCATED]' // Não logar o base64 completo
-          }
+          ...(payload && { 
+            payload: {
+              ...payload,
+              media: '[BASE64_TRUNCATED]' // Não logar o base64 completo
+            }
+          })
         })
         return NextResponse.json(
           { error: `Erro ao enviar arquivo via WhatsApp: ${errorData.response?.message || errorData.message || 'Erro desconhecido'}` },

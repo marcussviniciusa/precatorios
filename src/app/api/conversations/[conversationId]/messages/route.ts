@@ -30,7 +30,7 @@ export async function GET(
 
     // Ordenar mensagens por timestamp
     const sortedMessages = conversation.messages.sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      (a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     )
 
     return NextResponse.json({
