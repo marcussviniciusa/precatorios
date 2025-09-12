@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Brain, Settings, MessageSquare, Target, Zap, Save, Loader2, Image, Mic, FileText, Eye } from 'lucide-react'
+import { Brain, Settings, MessageSquare, Target, Zap, Save, Loader2, Image, Mic, FileText, Eye, Upload, CheckCircle, X } from 'lucide-react'
 import { getAuthHeaders } from '@/lib/client-auth'
 import type { BotConfig } from '@/types'
 
@@ -19,6 +19,7 @@ export default function AIConfigPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [uploadingCredentials, setUploadingCredentials] = useState(false)
 
   useEffect(() => {
     fetchConfig()
@@ -120,6 +121,80 @@ export default function AIConfigPage() {
     const result = typeof value === 'boolean' ? value : defaultValue
     console.log(`getSwitchValue(${setting}) = ${result} (raw value: ${value})`)
     return result
+  }
+
+  const handleCredentialsUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Verificar se é um arquivo JSON
+    if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+      setMessage({ type: 'error', text: 'Por favor, selecione um arquivo JSON válido.' })
+      return
+    }
+
+    setUploadingCredentials(true)
+    setMessage(null)
+
+    try {
+      // Ler o conteúdo do arquivo
+      const fileContent = await file.text()
+      
+      // Verificar se é um JSON válido
+      const credentials = JSON.parse(fileContent)
+      
+      // Verificar se tem as propriedades necessárias do Google Cloud
+      if (!credentials.type || !credentials.project_id || !credentials.private_key_id) {
+        throw new Error('Arquivo de credenciais inválido. Certifique-se de que é um arquivo de chave de serviço do Google Cloud.')
+      }
+
+      // Enviar as credenciais para o servidor
+      const formData = new FormData()
+      formData.append('credentials', file)
+
+      // Para FormData, não incluir Content-Type nos headers (será definido automaticamente pelo navegador)
+      const token = localStorage.getItem('token')
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const response = await fetch('/api/config/google-vision/upload', {
+        method: 'POST',
+        headers,
+        body: formData
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao enviar credenciais')
+      }
+
+      const data = await response.json()
+
+      // Atualizar a configuração com o caminho do arquivo
+      setConfig({
+        ...config!,
+        mediaProcessing: {
+          ...config!.mediaProcessing,
+          googleVision: {
+            ...config!.mediaProcessing?.googleVision,
+            keyPath: data.filePath,
+            credentialsUploaded: true
+          }
+        }
+      })
+
+      setMessage({ type: 'success', text: 'Credenciais do Google Vision enviadas com sucesso!' })
+      
+    } catch (error: any) {
+      console.error('Error uploading credentials:', error)
+      setMessage({ type: 'error', text: error.message || 'Erro ao processar arquivo de credenciais' })
+    } finally {
+      setUploadingCredentials(false)
+      // Limpar o input para permitir re-upload do mesmo arquivo
+      event.target.value = ''
+    }
   }
 
   if (loading) {
@@ -605,29 +680,73 @@ export default function AIConfigPage() {
                   </div>
 
                   {config.mediaProcessing?.googleVision?.enabled && (
-                    <div className="space-y-2">
-                      <Label htmlFor="googleVisionKeyPath">Caminho da Chave JSON</Label>
-                      <Input
-                        id="googleVisionKeyPath"
-                        type="text"
-                        placeholder="./google-vision-key.json"
-                        value={config.mediaProcessing?.googleVision?.keyPath || './google-vision-key.json'}
-                        onChange={(e) => {
-                          setConfig({
-                            ...config,
-                            mediaProcessing: {
-                              ...config.mediaProcessing,
-                              googleVision: {
-                                ...config.mediaProcessing?.googleVision,
-                                keyPath: e.target.value
-                              }
-                            }
-                          })
-                        }}
-                      />
-                      <p className="text-sm text-gray-600">
-                        Caminho para o arquivo de credenciais do Google Cloud Vision
-                      </p>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="googleVisionCredentials">Arquivo de Credenciais do Google Cloud</Label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-gray-400 transition-colors">
+                          <div className="flex flex-col items-center justify-center text-center">
+                            <div className="flex items-center mb-2">
+                              {config.mediaProcessing?.googleVision?.credentialsUploaded ? (
+                                <CheckCircle className="h-8 w-8 text-green-500" />
+                              ) : (
+                                <Upload className="h-8 w-8 text-gray-400" />
+                              )}
+                            </div>
+                            <div className="mb-2">
+                              {config.mediaProcessing?.googleVision?.credentialsUploaded ? (
+                                <p className="text-sm text-green-600 font-medium">Credenciais carregadas com sucesso</p>
+                              ) : (
+                                <p className="text-sm text-gray-600">Clique para fazer upload do arquivo JSON de credenciais</p>
+                              )}
+                            </div>
+                            <input
+                              id="googleVisionCredentials"
+                              type="file"
+                              accept=".json,application/json"
+                              onChange={handleCredentialsUpload}
+                              disabled={uploadingCredentials}
+                              className="hidden"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={uploadingCredentials}
+                              onClick={() => document.getElementById('googleVisionCredentials')?.click()}
+                              className="mb-2"
+                            >
+                              {uploadingCredentials ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Enviando...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  {config.mediaProcessing?.googleVision?.credentialsUploaded ? 'Atualizar Credenciais' : 'Enviar Credenciais'}
+                                </>
+                              )}
+                            </Button>
+                            {config.mediaProcessing?.googleVision?.keyPath && (
+                              <p className="text-xs text-gray-500">
+                                Arquivo: {config.mediaProcessing.googleVision.keyPath.split('/').pop()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-sm text-blue-800">
+                            <strong>Como obter as credenciais:</strong>
+                          </p>
+                          <ol className="text-sm text-blue-700 mt-1 ml-4 list-decimal space-y-1">
+                            <li>Acesse o <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-900">Google Cloud Console</a></li>
+                            <li>Vá para APIs e Serviços → Credenciais</li>
+                            <li>Clique em "Criar credenciais" → "Chave da conta de serviço"</li>
+                            <li>Selecione uma conta de serviço e baixe o arquivo JSON</li>
+                            <li>Ative a API Vision no seu projeto Google Cloud</li>
+                          </ol>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

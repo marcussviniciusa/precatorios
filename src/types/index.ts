@@ -128,6 +128,7 @@ export interface BotConfig {
     googleVision?: {
       enabled?: boolean
       keyPath?: string
+      credentialsUploaded?: boolean
     }
     groq?: {
       enabled?: boolean
