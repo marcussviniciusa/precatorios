@@ -105,6 +105,17 @@ Regras importantes:
       maxMessagesToGroup: { type: Number, default: 5 }
     }
   },
+  mediaProcessing: {
+    enabled: { type: Boolean, default: false },
+    googleVision: {
+      enabled: { type: Boolean, default: false },
+      keyPath: { type: String, default: './google-vision-key.json' }
+    },
+    groq: {
+      enabled: { type: Boolean, default: false },
+      apiKey: String
+    }
+  },
   updatedBy: { type: String, ref: 'User' }
 }, {
   timestamps: true

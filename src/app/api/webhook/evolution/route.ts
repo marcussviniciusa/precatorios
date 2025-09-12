@@ -6,6 +6,7 @@ import BotConfig from '@/models/BotConfig'
 import { calculateLeadScore, getLeadClassification } from '@/lib/utils'
 import { broadcastNewMessage, broadcastConversationUpdated } from '@/lib/websocket'
 import { uploadBufferToMinio } from '@/lib/minio'
+import MediaProcessor from '@/lib/media-processor'
 
 // Mapa global para controlar timeouts de processamento por conversa
 const processingTimeouts = new Map<string, NodeJS.Timeout>()
@@ -150,6 +151,51 @@ export async function POST(request: NextRequest) {
                 
                 minioUrl = await uploadBufferToMinio(mediaBuffer, fileName, mimetype || 'application/octet-stream', folder)
                 console.log(`Media saved to MinIO: ${minioUrl}`)
+                
+                // Processar mídia para extrair texto (OCR/Transcription)
+                try {
+                  // Buscar configuração de processamento de mídia
+                  const config = await BotConfig.findOne().sort({ updatedAt: -1 })
+                  
+                  if (config?.mediaProcessing?.enabled) {
+                    const mediaProcessor = MediaProcessor.getInstance()
+                    
+                    // Inicializar o processador com configurações do banco
+                    await mediaProcessor.initialize({
+                      googleVisionEnabled: config.mediaProcessing.googleVision?.enabled || false,
+                      googleVisionKeyPath: config.mediaProcessing.googleVision?.keyPath || process.env.GOOGLE_VISION_KEY_PATH,
+                      groqEnabled: config.mediaProcessing.groq?.enabled || false,
+                      groqApiKey: config.mediaProcessing.groq?.apiKey || process.env.GROQ_API_KEY
+                    })
+                    
+                    if (mediaProcessor.isConfigured()) {
+                    const extractedText = await mediaProcessor.processMedia(
+                      mediaBuffer,
+                      mimetype || 'application/octet-stream',
+                      messageType as 'image' | 'document' | 'audio' | 'video'
+                    )
+                    
+                    if (extractedText) {
+                      // Adicionar texto extraído ao messageText
+                      messageText = messageText === '[Imagem enviada]' || 
+                                   messageText === '[Áudio enviado]' || 
+                                   messageText === '[Vídeo enviado]' ||
+                                   messageText.startsWith('[Documento:') 
+                                   ? extractedText 
+                                   : `${messageText}\n\n[Texto extraído]:\n${extractedText}`
+                      
+                      console.log(`Extracted text from ${messageType}: ${extractedText.substring(0, 100)}...`)
+                    }
+                    } else {
+                      console.log('Media processor not configured, skipping text extraction')
+                    }
+                  } else {
+                    console.log('Media processing disabled in configuration')
+                  }
+                } catch (processingError) {
+                  console.error('Error processing media:', processingError)
+                  // Continue sem o texto extraído
+                }
               } else {
                 console.log('Evolution API response missing base64 data:', base64Data)
               }
@@ -264,7 +310,7 @@ async function scheduleAIProcessing(
         
         console.log(`Actually processing with IA for conversation ${conversationId} (exec: ${executionId})`)
         console.log(`User messages found: ${userMessagesArray.length}`)
-        console.log(`Messages content: [${userMessagesArray.map(m => `"${m.content}"`).join(', ')}]`)
+        console.log(`Messages content: [${userMessagesArray.map((m: any) => `"${m.content}"`).join(', ')}]`)
         console.log(`Grouped message: "${userMessages}"`)
         
         // Processar com IA usando mensagens agrupadas

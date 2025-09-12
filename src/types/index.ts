@@ -117,6 +117,19 @@ export interface BotConfig {
       autoTransfer: boolean
       temperature: number
       maxTokens: number
+      messageGroupingDelay?: number
+      maxMessagesToGroup?: number
+    }
+  }
+  mediaProcessing?: {
+    enabled?: boolean
+    googleVision?: {
+      enabled?: boolean
+      keyPath?: string
+    }
+    groq?: {
+      enabled?: boolean
+      apiKey?: string
     }
   }
   updatedAt?: Date

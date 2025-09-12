@@ -1,205 +1,352 @@
-m@ubuntu:~/precatorios5$ npm run dev
-
-> precatorios-chatbot@0.1.0 dev
-> next dev
-
-  ▲ Next.js 14.2.5
-  - Local:        http://localhost:3000
-  - Environments: .env.local
-
- ✓ Starting...
- ✓ Ready in 1571ms
- ✓ Compiled /conversations in 461ms (65 modules)
- ✓ Compiled in 3.7s (524 modules)
-Socket.IO server initialized
- GET /api/socketio?EIO=4&transport=polling&t=3nup3aiv 200 in 21ms
- GET /conversations 200 in 5548ms
-Client connected to WebSocket: 47NBtgNHM9pbuANuAAAC
- ○ Compiling /api/conversations ...
- ✓ Compiled /api/conversations in 3.4s (459 modules)
- GET /api/conversations 200 in 5470ms
- GET /api/conversations 200 in 5493ms
- GET /api/conversations 200 in 365ms
- ○ Compiling /api/webhook/evolution ...
- ✓ Compiled /api/webhook/evolution in 1591ms (670 modules)
+○ Compiling /api/webhook/evolution ...
+ ✓ Compiled /api/webhook/evolution in 5.4s (1138 modules)
 Webhook received: {
   "event": "messages.upsert",
   "instance": "teste",
   "data": {
     "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
+      "remoteJid": "558496151588@s.whatsapp.net",
       "fromMe": false,
-      "id": "A5AF57C166DCFF74299966394BF29A1F",
-      "senderLid": "118245164060910@lid"
+      "id": "AC6AF69D2590D2B105B069242E6EC9CD",
+      "senderLid": "131082569682967@lid"
     },
-    "pushName": "marcussviniciusa",
+    "pushName": "Marcus",
     "status": "DELIVERY_ACK",
     "message": {
-      "conversation": "Bom dia",
+      "imageMessage": {
+        "url": "https://mmg.whatsapp.net/v/t62.7118-24/23727254_1289170726319708_2573781848465118205_n.enc?ccb=11-4&oh=01_Q5Aa2gEix63OuMO52hNH37GuZRSOx2w32fqn3ChZQgL0s5_2JQ&oe=68EBDA31&_nc_sid=5e03e0&mms3=true",
+        "mimetype": "image/jpeg",
+        "fileSha256": "lhYTCbi/Sl53r0NPR6xqqEsGmh8VA3Bmdm4z8C77Qus=",
+        "fileLength": "144255",
+        "height": 1507,
+        "width": 1026,
+        "mediaKey": "hhVNCyLunT4wF4E1i15OKT9qIhl8ryV6QV2QIPqcMl4=",
+        "fileEncSha256": "kyF+v0gNDYD8MeeRYrlalKaC8QyLomGUpZ5ABvSTeWg=",
+        "directPath": "/v/t62.7118-24/23727254_1289170726319708_2573781848465118205_n.enc?ccb=11-4&oh=01_Q5Aa2gEix63OuMO52hNH37GuZRSOx2w32fqn3ChZQgL0s5_2JQ&oe=68EBDA31&_nc_sid=5e03e0",
+        "mediaKeyTimestamp": "1757701914",
+        "jpegThumbnail": "/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEABsbGxscGx4hIR4qLSgtKj04MzM4PV1CR0JHQl2NWGdYWGdYjX2Xe3N7l33gsJycsOD/2c7Z//////////////8BGxsbGxwbHiEhHiotKC0qPTgzMzg9XUJHQkdCXY1YZ1hYZ1iNfZd7c3uXfeCwnJyw4P/Zztn////////////////CABEIAEgAMQMBIgACEQEDEQH/xAAvAAACAwEBAAAAAAAAAAAAAAAABAIDBQEGAQEBAQEAAAAAAAAAAAAAAAABAgAD/9oADAMBAAIQAxAAAADQSsUxck/nzSPOS6TAmbMRahTKPeKuxQ0TAtOVM6mNWvoeZILyqbWKSshMzWqucw0xMty2Tqiwc3AONFQWckFnQMf/xAAoEAACAQMEAQQBBQAAAAAAAAABAgADERIEEyExURQVMlIQIkFTYYH/2gAIAQEAAT8AfkQck/jV8JGQ2vMQelMx/oylqEqj9JjVHWvisFjNf0sF7QXtwZZpls8pN9tzM9ynqn6CXlepuWzS0yp9YxaKMgcTZWUKBqPi3iVNG4+HMpU9Ql9tDKiVGvmpyiaarUNghi3pjbPYmQlNmpFCe4hR+RaAeIaYPcesqcKI+nNQZ+Z6Z/Er0jQbPK8TXOhuFnurfxie6H90EbVqxvYRdWiUvlc+J6mp5mufKET/AGWlpTsycibSR0VuTNpL9TZp/WbSfWGmviBAOpi0Kt9TNt/qYQQpa3E3UmazcSbiT//EAB8RAAIBAwUBAAAAAAAAAAAAAAABAhIhIgMQERMxIP/aAAgBAgEBPwBoXu+nFSiddzUVKRUyLxsZc+kskUMjZfHJG+//xAAdEQACAQQDAAAAAAAAAAAAAAAAASECEBIxESAy/9oACAEDAQE/AEO9fqCKdyxSzFD2cohGSH1av//Z",
+        "contextInfo": {
+          "pairedMediaType": "NOT_PAIRED_MEDIA"
+        },
+        "scansSidecar": "VnTtbJPTSKJB7Xpw2grXNoJbFss=",
+        "scanLengths": [
+          16039,
+          128216
+        ]
+      },
       "messageContextInfo": {
         "deviceListMetadata": {
-          "senderKeyHash": "qqnLaQHq72dwmw==",
-          "senderTimestamp": "1757531176",
+          "senderTimestamp": "1757599463",
           "recipientKeyHash": "KvnbOBGYYi1hkQ==",
           "recipientTimestamp": "1757636894"
         },
         "deviceListMetadataVersion": 2,
-        "messageSecret": "d+9ogGS6dTKdPwmqFmGVJYMc9C5/cHQAAAQJqhWifRo="
+        "messageSecret": "73dusppx3KqWt3EoZVq8tj23P0TpcjaITlQJOSrRuMM="
       }
     },
-    "messageType": "conversation",
-    "messageTimestamp": 1757697440,
+    "contextInfo": {
+      "pairedMediaType": "NOT_PAIRED_MEDIA"
+    },
+    "messageType": "imageMessage",
+    "messageTimestamp": 1757701915,
     "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
     "source": "android"
   },
   "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:20.287Z",
+  "date_time": "2025-09-12T15:31:55.399Z",
   "sender": "557191005656@s.whatsapp.net",
   "server_url": "https://api.marcussviniciusa.cloud",
   "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
 }
-Processing individual message from: 558491516506@s.whatsapp.net
-Message processed: text - "Bom dia" from 558491516506
-Webhook received: {
-  "event": "messages.upsert",
-  "instance": "teste",
-  "data": {
-    "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
-      "fromMe": false,
-      "id": "A5C2205888E9287235D3F42C52ACDCDB",
-      "senderLid": "118245164060910@lid"
-    },
-    "pushName": "marcussviniciusa",
-    "status": "DELIVERY_ACK",
-    "message": {
-      "conversation": "Oi",
-      "messageContextInfo": {
-        "deviceListMetadata": {
-          "senderKeyHash": "qqnLaQHq72dwmw==",
-          "senderTimestamp": "1757531176",
-          "recipientKeyHash": "KvnbOBGYYi1hkQ==",
-          "recipientTimestamp": "1757636894"
-        },
-        "deviceListMetadataVersion": 2,
-        "messageSecret": "wCex7XDfSy5sdpHgyKs5/ZBr3i7Itof1KzaPqe3Cwo8="
-      }
-    },
-    "messageType": "conversation",
-    "messageTimestamp": 1757697438,
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "source": "android"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:18.863Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
-Processing individual message from: 558491516506@s.whatsapp.net
-Message processed: text - "Oi" from 558491516506
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-Scheduled AI processing for conversation 68c455a178aa696cd371b297 in 3000ms (exec: 1757697442295.5042)
- POST /api/webhook/evolution 200 in 1542ms
-Cancelled previous AI processing for conversation 68c455a178aa696cd371b297
-Scheduled AI processing for conversation 68c455a178aa696cd371b297 in 3000ms (exec: 1757697442441.508)
- POST /api/webhook/evolution 200 in 3227ms
-Webhook received: {
-  "event": "messages.upsert",
-  "instance": "teste",
-  "data": {
-    "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
-      "fromMe": false,
-      "id": "A57D2ADFACC496C7FB51CF16F1F58481",
-      "senderLid": "118245164060910@lid"
-    },
-    "pushName": "marcussviniciusa",
-    "status": "DELIVERY_ACK",
-    "message": {
-      "conversation": "Todo bem",
-      "messageContextInfo": {
-        "deviceListMetadata": {
-          "senderKeyHash": "qqnLaQHq72dwmw==",
-          "senderTimestamp": "1757531176",
-          "recipientKeyHash": "KvnbOBGYYi1hkQ==",
-          "recipientTimestamp": "1757636894"
-        },
-        "deviceListMetadataVersion": 2,
-        "messageSecret": "Qd3wbWqLLpVrR5mQTQqbgICWCEpsRgXeLhFnxLps/aI="
-      }
-    },
-    "messageType": "conversation",
-    "messageTimestamp": 1757697442,
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "source": "android"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:22.659Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
-Processing individual message from: 558491516506@s.whatsapp.net
-Message processed: text - "Todo bem" from 558491516506
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-Cancelled previous AI processing for conversation 68c455a178aa696cd371b297
-Scheduled AI processing for conversation 68c455a178aa696cd371b297 in 3000ms (exec: 1757697443620.6006)
- POST /api/webhook/evolution 200 in 832ms
-Webhook received: {
-  "event": "messages.upsert",
-  "instance": "teste",
-  "data": {
-    "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
-      "fromMe": false,
-      "id": "A58C0E9BC869A8EB0BE06EE3E1558115",
-      "senderLid": "118245164060910@lid"
-    },
-    "pushName": "marcussviniciusa",
-    "status": "DELIVERY_ACK",
-    "message": {
-      "conversation": "Me chamo marcus",
-      "messageContextInfo": {
-        "deviceListMetadata": {
-          "senderKeyHash": "qqnLaQHq72dwmw==",
-          "senderTimestamp": "1757531176",
-          "recipientKeyHash": "KvnbOBGYYi1hkQ==",
-          "recipientTimestamp": "1757636894"
-        },
-        "deviceListMetadataVersion": 2,
-        "messageSecret": "8OS5MTDviBruGpLUcV599TgCDh+2VquIsxHCGEzjB8Q="
-      }
-    },
-    "messageType": "conversation",
-    "messageTimestamp": 1757697445,
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "source": "android"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:25.680Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
-Processing individual message from: 558491516506@s.whatsapp.net
-Message processed: text - "Me chamo marcus" from 558491516506
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-Processing grouped messages for conversation 68c455a178aa696cd371b297 after 3000ms delay (exec: 1757697443620.6006)
-Cancelled previous AI processing for conversation 68c455a178aa696cd371b297
-Scheduled AI processing for conversation 68c455a178aa696cd371b297 in 3000ms (exec: 1757697446629.8184)
- POST /api/webhook/evolution 200 in 835ms
-Actually processing with IA for conversation 68c455a178aa696cd371b297 (exec: 1757697443620.6006)
-User messages found: 4
-Messages content: ["Bom dia", "Oi", "Todo bem", "Me chamo marcus"]
-Grouped message: "Bom dia Oi Todo bem Me chamo marcus"
+Processing individual message from: 558496151588@s.whatsapp.net
+Message processed: image - "[Imagem enviada]" from 558496151588
+Attempting to download media using Evolution API for message: AC6AF69D2590D2B105B069242E6EC9CD
+Media decoded successfully from Evolution API (144255 bytes)
+Buffer uploaded successfully to MinIO: images/2025-09-12T18-32-10-399Z-7tfjll.jpg { etag: '78e35f6733b3be8fa8ce46bb588ff23f', versionId: null }
+Media saved to MinIO: https://s3.marcussviniciusa.cloud/precatorios-files/images/2025-09-12T18-32-10-399Z-7tfjll.jpg
+Google Vision client initialized
+Groq client initialized
+Processing media type: image, mimeType: image/jpeg
+Processing image with Google Vision OCR (image/jpeg)
+OCR extracted 1147 characters
+Extracted text from image: VANS
+NS VA
+ANS
+SVAN
+n
+Sexta-feira, 12 de setembro
+15:20
+Vor Cores Hascimen
+a
+0
+G
+4
+14
+Changes from a...
+Broadcasted new message to conversation:68c4553e89d1b3f2a8a04d8b
+Scheduled AI processing for conversation 68c4553e89d1b3f2a8a04d8b in 3000ms (exec: 1757701933971.325)
+ POST /api/webhook/evolution 200 in 18205ms
+Client disconnected from WebSocket: pJlqZRrC1RdyXeJUAAAJ
+ GET /conversations 200 in 209ms
+Client connected to WebSocket: NgTFC8C6GSN_M1b7AAAM
+ GET /api/conversations 200 in 370ms
+ GET /api/conversations 200 in 371ms
+Processing grouped messages for conversation 68c4553e89d1b3f2a8a04d8b after 3000ms delay (exec: 1757701933971.325)
+Actually processing with IA for conversation 68c4553e89d1b3f2a8a04d8b (exec: 1757701933971.325)
+User messages found: 5
+Messages content: ["Bom dia", "Tudo bem", "Me chamo marcus", "Oi", "VANS
+NS VA
+ANS
+SVAN
+n
+Sexta-feira, 12 de setembro
+15:20
+Vor Cores Hascimen
+a
+0
+G
+4
+14
+Changes from all commits File filter Conversations.
+Q Filter changed files
+agents
+rule excessive mat amount/vo
+agents/rule excessive at amount/ve_11/excess
+00-12,6 +12,7 0
+12
+Dexcessive mat amount.py
+12
+回
+find right unit,
+13 13
+load price tables,
+rule excessive therapies/v0.0.2
+14 14
+'
+15
+Drule excessive therapies ...
+from agents.to be utils.characters
+15
+16
+from agents.to be,utils. load base i
+rule fee payment/v2.0.1
+16
+17
+from agents.to be utils.net filter
+17
+18
+Drule Improper fee paymen...
+7
+from agents.to be utils.prepare data
+00-445,7 +446,600 def rule assesse
+fleat
+445
+446
+447
+448
+1
+?
+6
+1
+2
+3 €
+4
+5
+6
+7
+8
+9
+O
+Q
+W
+E
+R
+T
+Y
+U
+0
+P
+9
+D
+A
+S
+D
+F
+G
+H
+୮
+K
+L
+C
+;
+Z
+X
+C
+V
+B
+N
+M
+fn
+τ
+H
+H
+command
+option
+control
+option
+command
+.
++
+=
+419
+4
+458
+411
+457
+Filtering items with specialis
+glosas, filtered, df evaluated i
+df evaluated-df evaluated, agent,id-self.
+glosas, filtered
+glesas, filtered.joint
+with free unit/lidarve"
+"proced cirina", "procedia terap
+-417,15 457, def rule assessment(self
+times flast
+lat.collevents"), pl.co
+at Pedir in atted dia
+Portugus6
+O"]
+Grouped message: "Bom dia Tudo bem Me chamo marcus Oi VANS
+NS VA
+ANS
+SVAN
+n
+Sexta-feira, 12 de setembro
+15:20
+Vor Cores Hascimen
+a
+0
+G
+4
+14
+Changes from all commits File filter Conversations.
+Q Filter changed files
+agents
+rule excessive mat amount/vo
+agents/rule excessive at amount/ve_11/excess
+00-12,6 +12,7 0
+12
+Dexcessive mat amount.py
+12
+回
+find right unit,
+13 13
+load price tables,
+rule excessive therapies/v0.0.2
+14 14
+'
+15
+Drule excessive therapies ...
+from agents.to be utils.characters
+15
+16
+from agents.to be,utils. load base i
+rule fee payment/v2.0.1
+16
+17
+from agents.to be utils.net filter
+17
+18
+Drule Improper fee paymen...
+7
+from agents.to be utils.prepare data
+00-445,7 +446,600 def rule assesse
+fleat
+445
+446
+447
+448
+1
+?
+6
+1
+2
+3 €
+4
+5
+6
+7
+8
+9
+O
+Q
+W
+E
+R
+T
+Y
+U
+0
+P
+9
+D
+A
+S
+D
+F
+G
+H
+୮
+K
+L
+C
+;
+Z
+X
+C
+V
+B
+N
+M
+fn
+τ
+H
+H
+command
+option
+control
+option
+command
+.
++
+=
+419
+4
+458
+411
+457
+Filtering items with specialis
+glosas, filtered, df evaluated i
+df evaluated-df evaluated, agent,id-self.
+glosas, filtered
+glesas, filtered.joint
+with free unit/lidarve"
+"proced cirina", "procedia terap
+-417,15 457, def rule assessment(self
+times flast
+lat.collevents"), pl.co
+at Pedir in atted dia
+Portugus6
+O"
+ GET /api/conversations 200 in 363ms
+Client NgTFC8C6GSN_M1b7AAAM joined conversation:68c4553e89d1b3f2a8a04d8b
+ ✓ Compiled /api/conversations/[conversationId]/messages in 461ms (1140 modules)
 OpenRouter response: {
-  "id": "gen-1757697447-qkwjaqRHHZFh70SWB6yZ",
+  "id": "gen-1757701938-CkKdW74vf56NMTRORd8N",
   "provider": "OpenAI",
   "model": "openai/gpt-4.1-mini",
   "object": "chat.completion",
-  "created": 1757697447,
+  "created": 1757701938,
   "choices": [
     {
       "logprobs": null,
@@ -216,9 +363,9 @@ OpenRouter response: {
   ],
   "system_fingerprint": "fp_4fce0778af",
   "usage": {
-    "prompt_tokens": 235,
+    "prompt_tokens": 1129,
     "completion_tokens": 10,
-    "total_tokens": 245,
+    "total_tokens": 1139,
     "prompt_tokens_details": {
       "cached_tokens": 0,
       "audio_tokens": 0
@@ -229,14 +376,14 @@ OpenRouter response: {
   }
 }
 AI extracted lead info: { Nome: 'marcus' }
-Processing grouped messages for conversation 68c455a178aa696cd371b297 after 3000ms delay (exec: 1757697446629.8184)
-Conversation 68c455a178aa696cd371b297 already being processed, skipping (exec: 1757697446629.8184)
+ GET /api/conversations/68c4553e89d1b3f2a8a04d8b/messages 200 in 1856ms
+ ✓ Compiled /api/conversations/[conversationId]/instance in 402ms (1143 modules)
 OpenRouter response: {
-  "id": "gen-1757697448-FIkPMZa172zBEASBj2My",
+  "id": "gen-1757701939-PRQ5GNPwm9NkGwfXnlAH",
   "provider": "OpenAI",
   "model": "openai/gpt-4.1-mini",
   "object": "chat.completion",
-  "created": 1757697448,
+  "created": 1757701939,
   "choices": [
     {
       "logprobs": null,
@@ -245,7 +392,7 @@ OpenRouter response: {
       "index": 0,
       "message": {
         "role": "assistant",
-        "content": "{\n  \"score\": 0,\n  \"classification\": \"discard\",\n  \"reasoning\": \"Lead não possui precatório confirmado, valor elegível, estado elegível, urgência demonstrada, documentos enviados ou interesse claro.\"\n}",
+        "content": "{\n  \"score\": 0,\n  \"classification\": \"discard\",\n  \"reasoning\": \"Lead não possui precatório confirmado, valor elegível, estado elegível, não demonstra urgência clara, não enviou documentos e não apresentou interesse claro.\"\n}",
         "refusal": null,
         "reasoning": null
       }
@@ -253,9 +400,9 @@ OpenRouter response: {
   ],
   "system_fingerprint": "fp_4fce0778af",
   "usage": {
-    "prompt_tokens": 412,
-    "completion_tokens": 48,
-    "total_tokens": 460,
+    "prompt_tokens": 874,
+    "completion_tokens": 53,
+    "total_tokens": 927,
     "prompt_tokens_details": {
       "cached_tokens": 0,
       "audio_tokens": 0
@@ -266,11 +413,11 @@ OpenRouter response: {
   }
 }
 OpenRouter response: {
-  "id": "gen-1757697449-3i3a8eXOtC3zOus7y9ZJ",
+  "id": "gen-1757701940-4uiRhieUSdolcnbRJJE1",
   "provider": "OpenAI",
   "model": "openai/gpt-4.1-mini",
   "object": "chat.completion",
-  "created": 1757697449,
+  "created": 1757701940,
   "choices": [
     {
       "logprobs": null,
@@ -279,7 +426,7 @@ OpenRouter response: {
       "index": 0,
       "message": {
         "role": "assistant",
-        "content": "Oi Marcus, você tem algum precatório em seu nome? Se sim, pode informar o estado e o valor aproximado?",
+        "content": "Marcus, não entendi as informações enviadas. Você pode confirmar se tem precatório e informar o estado e o valor aproximado?",
         "refusal": null,
         "reasoning": null
       }
@@ -287,9 +434,9 @@ OpenRouter response: {
   ],
   "system_fingerprint": "fp_4fce0778af",
   "usage": {
-    "prompt_tokens": 497,
-    "completion_tokens": 25,
-    "total_tokens": 522,
+    "prompt_tokens": 1394,
+    "completion_tokens": 27,
+    "total_tokens": 1421,
     "prompt_tokens_details": {
       "cached_tokens": 0,
       "audio_tokens": 0
@@ -299,605 +446,57 @@ OpenRouter response: {
     }
   }
 }
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-AI response sent to 558491516506: "Oi Marcus, você tem algum precatório em seu nome? Se sim, pode informar o estado e o valor aproximado?"
-Finished processing conversation 68c455a178aa696cd371b297 (exec: 1757697443620.6006)
-Webhook received: {
-  "event": "messages.update",
-  "instance": "teste",
-  "data": {
-    "keyId": "3EB0F2FF05C854F05F4084594F3E16D0B5452356",
-    "remoteJid": "558491516506:62@s.whatsapp.net",
-    "fromMe": true,
-    "participant": "558491516506:62@s.whatsapp.net",
-    "status": "DELIVERY_ACK",
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "messageId": "cmfh3ohpd3u49o55b1vtzq7xb"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:32.055Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
- POST /api/webhook/evolution 200 in 20ms
+ GET /api/conversations/68c4553e89d1b3f2a8a04d8b/instance 200 in 1892ms
+ ✓ Compiled /api/conversations/[conversationId]/read in 375ms (1145 modules)
+Broadcasted new message to conversation:68c4553e89d1b3f2a8a04d8b
+AI response sent to 558496151588: "Marcus, não entendi as informações enviadas. Você pode confirmar se tem precatório e informar o estado e o valor aproximado?"
+Finished processing conversation 68c4553e89d1b3f2a8a04d8b (exec: 1757701933971.325)
 Webhook received: {
   "event": "send.message",
   "instance": "teste",
   "data": {
     "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
+      "remoteJid": "558496151588@s.whatsapp.net",
       "fromMe": true,
-      "id": "3EB0F2FF05C854F05F4084594F3E16D0B5452356"
+      "id": "3EB092C61CA0131EAAA0843FB9BBD91AFB758879"
     },
     "pushName": "Você",
     "status": "PENDING",
     "message": {
-      "conversation": "Oi Marcus, você tem algum precatório em seu nome? Se sim, pode informar o estado e o valor aproximado?"
+      "conversation": "Marcus, não entendi as informações enviadas. Você pode confirmar se tem precatório e informar o estado e o valor aproximado?"
     },
     "contextInfo": null,
     "messageType": "conversation",
-    "messageTimestamp": 1757697451,
+    "messageTimestamp": 1757701941,
     "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
     "source": "unknown"
   },
   "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:31.685Z",
+  "date_time": "2025-09-12T15:32:22.393Z",
   "sender": "557191005656@s.whatsapp.net",
   "server_url": "https://api.marcussviniciusa.cloud",
   "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
 }
- POST /api/webhook/evolution 200 in 151ms
-Webhook received: {
-  "event": "messages.upsert",
-  "instance": "teste",
-  "data": {
-    "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
-      "fromMe": false,
-      "id": "A5EEB8D5ECEA3EFFBD2B2C91381F3A43",
-      "senderLid": "118245164060910@lid"
-    },
-    "pushName": "marcussviniciusa",
-    "status": "DELIVERY_ACK",
-    "message": {
-      "conversation": "Sim",
-      "messageContextInfo": {
-        "deviceListMetadata": {
-          "senderKeyHash": "qqnLaQHq72dwmw==",
-          "senderTimestamp": "1757531176",
-          "recipientKeyHash": "KvnbOBGYYi1hkQ==",
-          "recipientTimestamp": "1757636894"
-        },
-        "deviceListMetadataVersion": 2,
-        "messageSecret": "BM22Sb1yxccXHLrWeKChwjlLoLVQn/nnapIcmrrS1TY="
-      }
-    },
-    "messageType": "conversation",
-    "messageTimestamp": 1757697459,
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "source": "android"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:40.229Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
-Processing individual message from: 558491516506@s.whatsapp.net
-Message processed: text - "Sim" from 558491516506
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-Scheduled AI processing for conversation 68c455a178aa696cd371b297 in 3000ms (exec: 1757697461193.1497)
- POST /api/webhook/evolution 200 in 854ms
-Webhook received: {
-  "event": "messages.upsert",
-  "instance": "teste",
-  "data": {
-    "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
-      "fromMe": false,
-      "id": "A5C02812672224F09971C0649571EB50",
-      "senderLid": "118245164060910@lid"
-    },
-    "pushName": "marcussviniciusa",
-    "status": "DELIVERY_ACK",
-    "message": {
-      "conversation": "No valor de 10k",
-      "messageContextInfo": {
-        "deviceListMetadata": {
-          "senderKeyHash": "qqnLaQHq72dwmw==",
-          "senderTimestamp": "1757531176",
-          "recipientKeyHash": "KvnbOBGYYi1hkQ==",
-          "recipientTimestamp": "1757636894"
-        },
-        "deviceListMetadataVersion": 2,
-        "messageSecret": "AHiA3+pA5HpC/9KICGzhooW3dYgSlcrOlOljZdSAiXE="
-      }
-    },
-    "messageType": "conversation",
-    "messageTimestamp": 1757697463,
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "source": "android"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:43.661Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
-Processing individual message from: 558491516506@s.whatsapp.net
-Message processed: text - "No valor de 10k" from 558491516506
-Processing grouped messages for conversation 68c455a178aa696cd371b297 after 3000ms delay (exec: 1757697461193.1497)
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-Actually processing with IA for conversation 68c455a178aa696cd371b297 (exec: 1757697461193.1497)
-User messages found: 5
-Messages content: ["Oi", "Todo bem", "Me chamo marcus", "Sim", "No valor de 10k"]
-Grouped message: "Oi Todo bem Me chamo marcus Sim No valor de 10k"
-Cancelled previous AI processing for conversation 68c455a178aa696cd371b297
-Scheduled AI processing for conversation 68c455a178aa696cd371b297 in 3000ms (exec: 1757697464620.6704)
- POST /api/webhook/evolution 200 in 846ms
-Webhook received: {
-  "event": "messages.upsert",
-  "instance": "teste",
-  "data": {
-    "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
-      "fromMe": false,
-      "id": "A5B0FE02AF4CAE9D1456954A9E10482E",
-      "senderLid": "118245164060910@lid"
-    },
-    "pushName": "marcussviniciusa",
-    "status": "DELIVERY_ACK",
-    "message": {
-      "conversation": "Sou do rn",
-      "messageContextInfo": {
-        "deviceListMetadata": {
-          "senderKeyHash": "qqnLaQHq72dwmw==",
-          "senderTimestamp": "1757531176",
-          "recipientKeyHash": "KvnbOBGYYi1hkQ==",
-          "recipientTimestamp": "1757636894"
-        },
-        "deviceListMetadataVersion": 2,
-        "messageSecret": "lp4DbTlHUHlnCwK7gMaxkehQsR6kF7Pvt3qLL1o1jX0="
-      }
-    },
-    "messageType": "conversation",
-    "messageTimestamp": 1757697466,
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "source": "android"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:46.525Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
-Processing individual message from: 558491516506@s.whatsapp.net
-Message processed: text - "Sou do rn" from 558491516506
-OpenRouter response: {
-  "id": "gen-1757697465-33X8kAjwnZ2bKpggNbz0",
-  "provider": "OpenAI",
-  "model": "openai/gpt-4.1-mini",
-  "object": "chat.completion",
-  "created": 1757697465,
-  "choices": [
-    {
-      "logprobs": null,
-      "finish_reason": "stop",
-      "native_finish_reason": "stop",
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "{\n  \"Nome\": \"marcus\",\n  \"PossuiPrecatório\": \"sim\",\n  \"ValorPrecatório\": 10000\n}",
-        "refusal": null,
-        "reasoning": null
-      }
-    }
-  ],
-  "system_fingerprint": "fp_4fce0778af",
-  "usage": {
-    "prompt_tokens": 271,
-    "completion_tokens": 32,
-    "total_tokens": 303,
-    "prompt_tokens_details": {
-      "cached_tokens": 0,
-      "audio_tokens": 0
-    },
-    "completion_tokens_details": {
-      "reasoning_tokens": 0
-    }
-  }
-}
-AI extracted lead info: { Nome: 'marcus', 'PossuiPrecatório': 'sim', 'ValorPrecatório': 10000 }
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-Cancelled previous AI processing for conversation 68c455a178aa696cd371b297
-Scheduled AI processing for conversation 68c455a178aa696cd371b297 in 3000ms (exec: 1757697467469.179)
- POST /api/webhook/evolution 200 in 832ms
-OpenRouter response: {
-  "id": "gen-1757697467-Tqs8VIM6U3aqMEkNWNFQ",
-  "provider": "OpenAI",
-  "model": "openai/gpt-4.1-mini",
-  "object": "chat.completion",
-  "created": 1757697467,
-  "choices": [
-    {
-      "logprobs": null,
-      "finish_reason": "stop",
-      "native_finish_reason": "stop",
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "{\n  \"score\": 40,\n  \"classification\": \"cold\",\n  \"reasoning\": \"Possui precatório confirmado (+40), valor igual a 10.000 não ultrapassa o limite para pontuação (+0), estado não informado (+0), urgência média não conta como urgência demonstrada (+0), não enviou documentos (+0), interesse claro (+0).\"\n}",
-        "refusal": null,
-        "reasoning": null
-      }
-    }
-  ],
-  "system_fingerprint": "fp_4fce0778af",
-  "usage": {
-    "prompt_tokens": 443,
-    "completion_tokens": 80,
-    "total_tokens": 523,
-    "prompt_tokens_details": {
-      "cached_tokens": 0,
-      "audio_tokens": 0
-    },
-    "completion_tokens_details": {
-      "reasoning_tokens": 0
-    }
-  }
-}
-AI calculated new score: 40 (cold)
-Webhook received: {
-  "event": "messages.upsert",
-  "instance": "teste",
-  "data": {
-    "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
-      "fromMe": false,
-      "id": "A5EF0FA8B89A8D43821865C7734A29A6",
-      "senderLid": "118245164060910@lid"
-    },
-    "pushName": "marcussviniciusa",
-    "status": "DELIVERY_ACK",
-    "message": {
-      "conversation": "Ria geande",
-      "messageContextInfo": {
-        "deviceListMetadata": {
-          "senderKeyHash": "qqnLaQHq72dwmw==",
-          "senderTimestamp": "1757531176",
-          "recipientKeyHash": "KvnbOBGYYi1hkQ==",
-          "recipientTimestamp": "1757636894"
-        },
-        "deviceListMetadataVersion": 2,
-        "messageSecret": "8SYixJu5vBawlCxXto1tDOfaiuECBksPqXbL+s42BjE="
-      }
-    },
-    "messageType": "conversation",
-    "messageTimestamp": 1757697468,
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "source": "android"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:49.129Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
-Processing individual message from: 558491516506@s.whatsapp.net
-Message processed: text - "Ria geande" from 558491516506
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-OpenRouter response: {
-  "id": "gen-1757697469-MbtDc9IrKScfEkgiLgzL",
-  "provider": "OpenAI",
-  "model": "openai/gpt-4.1-mini",
-  "object": "chat.completion",
-  "created": 1757697469,
-  "choices": [
-    {
-      "logprobs": null,
-      "finish_reason": "stop",
-      "native_finish_reason": "stop",
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "Trabalhamos com precatórios acima de R$ 10.000. Você pode confirmar o estado onde seu precatório foi emitido?",
-        "refusal": null,
-        "reasoning": null
-      }
-    }
-  ],
-  "system_fingerprint": "fp_4fce0778af",
-  "usage": {
-    "prompt_tokens": 533,
-    "completion_tokens": 28,
-    "total_tokens": 561,
-    "prompt_tokens_details": {
-      "cached_tokens": 0,
-      "audio_tokens": 0
-    },
-    "completion_tokens_details": {
-      "reasoning_tokens": 0
-    }
-  }
-}
-Cancelled previous AI processing for conversation 68c455a178aa696cd371b297
-Scheduled AI processing for conversation 68c455a178aa696cd371b297 in 3000ms (exec: 1757697470078.7388)
- POST /api/webhook/evolution 200 in 834ms
-Webhook received: {
-  "event": "send.message",
-  "instance": "teste",
-  "data": {
-    "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
-      "fromMe": true,
-      "id": "3EB073FCFEF84D55FCF91CCC805720510F1179CB"
-    },
-    "pushName": "Você",
-    "status": "PENDING",
-    "message": {
-      "conversation": "Trabalhamos com precatórios acima de R$ 10.000. Você pode confirmar o estado onde seu precatório foi emitido?"
-    },
-    "contextInfo": null,
-    "messageType": "conversation",
-    "messageTimestamp": 1757697470,
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "source": "unknown"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:50.988Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
- POST /api/webhook/evolution 200 in 15ms
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-AI response sent to 558491516506: "Trabalhamos com precatórios acima de R$ 10.000. Você pode confirmar o estado onde seu precatório foi emitido?"
-Finished processing conversation 68c455a178aa696cd371b297 (exec: 1757697461193.1497)
+ POST /api/webhook/evolution 200 in 480ms
 Webhook received: {
   "event": "messages.update",
   "instance": "teste",
   "data": {
-    "keyId": "3EB073FCFEF84D55FCF91CCC805720510F1179CB",
-    "remoteJid": "558491516506:62@s.whatsapp.net",
+    "keyId": "3EB092C61CA0131EAAA0843FB9BBD91AFB758879",
+    "remoteJid": "558496151588@s.whatsapp.net",
     "fromMe": true,
-    "participant": "558491516506:62@s.whatsapp.net",
+    "participant": "558496151588@s.whatsapp.net",
     "status": "DELIVERY_ACK",
     "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "messageId": "cmfh3owll3u56o55b1j56rqz7"
+    "messageId": "cmfh6cqr63uk4o55bqo8q20iu"
   },
   "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:51.346Z",
+  "date_time": "2025-09-12T15:32:22.947Z",
   "sender": "557191005656@s.whatsapp.net",
   "server_url": "https://api.marcussviniciusa.cloud",
   "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
 }
- POST /api/webhook/evolution 200 in 15ms
-Webhook received: {
-  "event": "messages.upsert",
-  "instance": "teste",
-  "data": {
-    "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
-      "fromMe": false,
-      "id": "A550580EB1F2486E0571C5A09EEB518F",
-      "senderLid": "118245164060910@lid"
-    },
-    "pushName": "marcussviniciusa",
-    "status": "DELIVERY_ACK",
-    "message": {
-      "conversation": "Em parelhas",
-      "messageContextInfo": {
-        "deviceListMetadata": {
-          "senderKeyHash": "qqnLaQHq72dwmw==",
-          "senderTimestamp": "1757531176",
-          "recipientKeyHash": "KvnbOBGYYi1hkQ==",
-          "recipientTimestamp": "1757636894"
-        },
-        "deviceListMetadataVersion": 2,
-        "messageSecret": "tSzFpDTf8Fc/wbkdECmXf/xjfKG2sc0XtIWMEmdF8k4="
-      }
-    },
-    "messageType": "conversation",
-    "messageTimestamp": 1757697471,
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "source": "android"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:17:52.005Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
-Processing individual message from: 558491516506@s.whatsapp.net
-Message processed: text - "Em parelhas" from 558491516506
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-Scheduled AI processing for conversation 68c455a178aa696cd371b297 in 3000ms (exec: 1757697472956.012)
- POST /api/webhook/evolution 200 in 831ms
-Processing grouped messages for conversation 68c455a178aa696cd371b297 after 3000ms delay (exec: 1757697470078.7388)
-Execution 1757697470078.7388 was cancelled, skipping
-Processing grouped messages for conversation 68c455a178aa696cd371b297 after 3000ms delay (exec: 1757697472956.012)
-Actually processing with IA for conversation 68c455a178aa696cd371b297 (exec: 1757697472956.012)
-User messages found: 5
-Messages content: ["Sim", "No valor de 10k", "Sou do rn", "Ria geande", "Em parelhas"]
-Grouped message: "Sim No valor de 10k Sou do rn Ria geande Em parelhas"
-OpenRouter response: {
-  "id": "gen-1757697476-eyuBOn6KvJrscllHxGhP",
-  "provider": "OpenAI",
-  "model": "openai/gpt-4.1-mini",
-  "object": "chat.completion",
-  "created": 1757697476,
-  "choices": [
-    {
-      "logprobs": null,
-      "finish_reason": "stop",
-      "native_finish_reason": "stop",
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "{\n  \"possuiPrecatório\": \"sim\",\n  \"valorPrecatório\": 10000,\n  \"estado\": \"RN\",\n  \"cidade\": \"Parelhas\",\n  \"urgência\": \"baixa\",\n  \"elegível\": false\n}",
-        "refusal": null,
-        "reasoning": null
-      }
-    }
-  ],
-  "system_fingerprint": "fp_4fce0778af",
-  "usage": {
-    "prompt_tokens": 277,
-    "completion_tokens": 57,
-    "total_tokens": 334,
-    "prompt_tokens_details": {
-      "cached_tokens": 0,
-      "audio_tokens": 0
-    },
-    "completion_tokens_details": {
-      "reasoning_tokens": 0
-    }
-  }
-}
-AI extracted lead info: {
-  'possuiPrecatório': 'sim',
-  'valorPrecatório': 10000,
-  estado: 'RN',
-  cidade: 'Parelhas',
-  'urgência': 'baixa',
-  'elegível': false
-}
-OpenRouter response: {
-  "id": "gen-1757697478-4xi3a9bIo4gsXz81ZifM",
-  "provider": "OpenAI",
-  "model": "openai/gpt-4.1-mini",
-  "object": "chat.completion",
-  "created": 1757697478,
-  "choices": [
-    {
-      "logprobs": null,
-      "finish_reason": "stop",
-      "native_finish_reason": "stop",
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "{\n  \"score\": 50,\n  \"classification\": \"warm\",\n  \"reasoning\": \"Possui valor elegível (10.000) +20 pontos, estado elegível (RN) +10 pontos, não demonstra urgência clara (0 pontos), não enviou documentos (0 pontos), interesse claro (5 pontos), não há confirmação de precatório (0 pontos). Total: 35 pontos + 15 pontos por interesse claro e estado elegível.\"\n}",
-        "refusal": null,
-        "reasoning": null
-      }
-    }
-  ],
-  "system_fingerprint": "fp_4fce0778af",
-  "usage": {
-    "prompt_tokens": 447,
-    "completion_tokens": 96,
-    "total_tokens": 543,
-    "prompt_tokens_details": {
-      "cached_tokens": 0,
-      "audio_tokens": 0
-    },
-    "completion_tokens_details": {
-      "reasoning_tokens": 0
-    }
-  }
-}
-AI calculated new score: 50 (warm)
-OpenRouter response: {
-  "id": "gen-1757697480-hgs99ZRGXHALlcH4c5yJ",
-  "provider": "OpenAI",
-  "model": "openai/gpt-4.1-mini",
-  "object": "chat.completion",
-  "created": 1757697480,
-  "choices": [
-    {
-      "logprobs": null,
-      "finish_reason": "stop",
-      "native_finish_reason": "stop",
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "Atendemos apenas os estados SP, RJ, MG, RS, PR, SC, BA, GO, DF e ES. Infelizmente, não trabalhamos com precatórios do RN. Posso ajudar com mais alguma coisa?",
-        "refusal": null,
-        "reasoning": null
-      }
-    }
-  ],
-  "system_fingerprint": "fp_4fce0778af",
-  "usage": {
-    "prompt_tokens": 539,
-    "completion_tokens": 46,
-    "total_tokens": 585,
-    "prompt_tokens_details": {
-      "cached_tokens": 0,
-      "audio_tokens": 0
-    },
-    "completion_tokens_details": {
-      "reasoning_tokens": 0
-    }
-  }
-}
-Broadcasted new message to conversation:68c455a178aa696cd371b297
-AI response sent to 558491516506: "Atendemos apenas os estados SP, RJ, MG, RS, PR, SC, BA, GO, DF e ES. Infelizmente, não trabalhamos com precatórios do RN. Posso ajudar com mais alguma coisa?"
-Finished processing conversation 68c455a178aa696cd371b297 (exec: 1757697472956.012)
-Webhook received: {
-  "event": "send.message",
-  "instance": "teste",
-  "data": {
-    "key": {
-      "remoteJid": "558491516506@s.whatsapp.net",
-      "fromMe": true,
-      "id": "3EB022155013876B5459DEB84FA86EE62A03362F"
-    },
-    "pushName": "Você",
-    "status": "PENDING",
-    "message": {
-      "conversation": "Atendemos apenas os estados SP, RJ, MG, RS, PR, SC, BA, GO, DF e ES. Infelizmente, não trabalhamos com precatórios do RN. Posso ajudar com mais alguma coisa?"
-    },
-    "contextInfo": null,
-    "messageType": "conversation",
-    "messageTimestamp": 1757697482,
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "source": "unknown"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:18:03.299Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
- POST /api/webhook/evolution 200 in 18ms
-Webhook received: {
-  "event": "messages.update",
-  "instance": "teste",
-  "data": {
-    "keyId": "3EB022155013876B5459DEB84FA86EE62A03362F",
-    "remoteJid": "558491516506:62@s.whatsapp.net",
-    "fromMe": true,
-    "participant": "558491516506:62@s.whatsapp.net",
-    "status": "DELIVERY_ACK",
-    "instanceId": "7c694e1b-6ae4-4328-8888-d9c29d7204f8",
-    "messageId": "cmfh3p63i3u5io55bkkiitrsi"
-  },
-  "destination": "https://ed76c0c6968b.ngrok-free.app/api/webhook/evolution",
-  "date_time": "2025-09-12T14:18:03.655Z",
-  "sender": "557191005656@s.whatsapp.net",
-  "server_url": "https://api.marcussviniciusa.cloud",
-  "apikey": "F97791CB-E165-4873-80CF-0FE79AACC076"
-}
- POST /api/webhook/evolution 200 in 17ms
-Client 47NBtgNHM9pbuANuAAAC joined conversation:68c4553e89d1b3f2a8a04d8b
- ○ Compiling /api/conversations/[conversationId]/messages ...
- ✓ Compiled /api/conversations/[conversationId]/messages in 729ms (440 modules)
- GET /api/conversations/68c4553e89d1b3f2a8a04d8b/messages 200 in 1772ms
- ✓ Compiled /api/conversations/[conversationId]/instance in 247ms (443 modules)
- GET /api/conversations/68c4553e89d1b3f2a8a04d8b/instance 200 in 1627ms
- ✓ Compiled /api/conversations/[conversationId]/read in 129ms (445 modules)
- POST /api/conversations/68c4553e89d1b3f2a8a04d8b/read 200 in 987ms
-Client disconnected from WebSocket: 47NBtgNHM9pbuANuAAAC
- GET /conversations 200 in 166ms
-Client connected to WebSocket: xtZYweSz_v93_zNAAAAF
- ✓ Compiled /api/conversations in 377ms (447 modules)
- GET /api/conversations 200 in 788ms
- GET /api/conversations 200 in 789ms
- GET /api/conversations 200 in 355ms
-Client xtZYweSz_v93_zNAAAAF joined conversation:68c455a178aa696cd371b297
- GET /api/conversations/68c455a178aa696cd371b297/messages 200 in 423ms
- GET /api/conversations/68c455a178aa696cd371b297/instance 200 in 731ms
- POST /api/conversations/68c455a178aa696cd371b297/read 200 in 379ms
+ POST /api/webhook/evolution 200 in 21ms
+ POST /api/conversations/68c4553e89d1b3f2a8a04d8b/read 200 in 1728ms
+
 

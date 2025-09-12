@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Brain, Settings, MessageSquare, Target, Zap, Save, Loader2 } from 'lucide-react'
+import { Brain, Settings, MessageSquare, Target, Zap, Save, Loader2, Image, Mic, FileText } from 'lucide-react'
 import { getAuthHeaders } from '@/lib/client-auth'
 import type { BotConfig } from '@/types'
 
@@ -117,7 +117,7 @@ export default function AIConfigPage() {
 
   const getSwitchValue = (setting: string, defaultValue: boolean = true): boolean => {
     const value = config?.aiConfig?.settings?.[setting as keyof typeof config.aiConfig.settings]
-    const result = value !== undefined ? value : defaultValue
+    const result = typeof value === 'boolean' ? value : defaultValue
     console.log(`getSwitchValue(${setting}) = ${result} (raw value: ${value})`)
     return result
   }
@@ -446,6 +446,160 @@ export default function AIConfigPage() {
               </p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Processamento de Mídia */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <FileText className="h-5 w-5" />
+            <span>Processamento de Mídia</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="mediaProcessingEnabled">Processamento de Mídia</Label>
+              <div className="text-sm text-gray-600">
+                Habilitar extração de texto de imagens, documentos e áudios
+              </div>
+            </div>
+            <Switch
+              checked={config.mediaProcessing?.enabled || false}
+              onCheckedChange={(checked) => {
+                setConfig({
+                  ...config,
+                  mediaProcessing: {
+                    ...config.mediaProcessing,
+                    enabled: checked
+                  }
+                })
+              }}
+            />
+          </div>
+
+          {config.mediaProcessing?.enabled && (
+            <>
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-medium mb-3 flex items-center space-x-2">
+                  <Image className="h-4 w-4" />
+                  <span>Google Vision OCR (Imagens e Documentos)</span>
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="googleVisionEnabled">Habilitar Google Vision</Label>
+                      <div className="text-sm text-gray-600">
+                        OCR para extrair texto de imagens e documentos PDF
+                      </div>
+                    </div>
+                    <Switch
+                      checked={config.mediaProcessing?.googleVision?.enabled || false}
+                      onCheckedChange={(checked) => {
+                        setConfig({
+                          ...config,
+                          mediaProcessing: {
+                            ...config.mediaProcessing,
+                            googleVision: {
+                              ...config.mediaProcessing?.googleVision,
+                              enabled: checked
+                            }
+                          }
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {config.mediaProcessing?.googleVision?.enabled && (
+                    <div className="space-y-2">
+                      <Label htmlFor="googleVisionKeyPath">Caminho da Chave JSON</Label>
+                      <Input
+                        id="googleVisionKeyPath"
+                        type="text"
+                        placeholder="./google-vision-key.json"
+                        value={config.mediaProcessing?.googleVision?.keyPath || './google-vision-key.json'}
+                        onChange={(e) => {
+                          setConfig({
+                            ...config,
+                            mediaProcessing: {
+                              ...config.mediaProcessing,
+                              googleVision: {
+                                ...config.mediaProcessing?.googleVision,
+                                keyPath: e.target.value
+                              }
+                            }
+                          })
+                        }}
+                      />
+                      <p className="text-sm text-gray-600">
+                        Caminho para o arquivo de credenciais do Google Cloud Vision
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-medium mb-3 flex items-center space-x-2">
+                  <Mic className="h-4 w-4" />
+                  <span>Groq Whisper (Transcrição de Áudio)</span>
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="groqEnabled">Habilitar Groq</Label>
+                      <div className="text-sm text-gray-600">
+                        Transcrição ultra-rápida de áudios com Whisper
+                      </div>
+                    </div>
+                    <Switch
+                      checked={config.mediaProcessing?.groq?.enabled || false}
+                      onCheckedChange={(checked) => {
+                        setConfig({
+                          ...config,
+                          mediaProcessing: {
+                            ...config.mediaProcessing,
+                            groq: {
+                              ...config.mediaProcessing?.groq,
+                              enabled: checked
+                            }
+                          }
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {config.mediaProcessing?.groq?.enabled && (
+                    <div className="space-y-2">
+                      <Label htmlFor="groqApiKey">Chave da API Groq</Label>
+                      <Input
+                        id="groqApiKey"
+                        type="password"
+                        placeholder="gsk_..."
+                        value={config.mediaProcessing?.groq?.apiKey || ''}
+                        onChange={(e) => {
+                          setConfig({
+                            ...config,
+                            mediaProcessing: {
+                              ...config.mediaProcessing,
+                              groq: {
+                                ...config.mediaProcessing?.groq,
+                                apiKey: e.target.value
+                              }
+                            }
+                          })
+                        }}
+                      />
+                      <p className="text-sm text-gray-600">
+                        Chave de API do Groq para transcrição de áudio
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
