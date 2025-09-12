@@ -114,6 +114,11 @@ Regras importantes:
     groq: {
       enabled: { type: Boolean, default: false },
       apiKey: String
+    },
+    openRouter: {
+      enabled: { type: Boolean, default: true },
+      apiKey: String,
+      imageModel: { type: String, default: 'openrouter/sonoma-sky-alpha' }
     }
   },
   updatedBy: { type: String, ref: 'User' }

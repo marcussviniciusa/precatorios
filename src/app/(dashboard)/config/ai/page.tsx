@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Brain, Settings, MessageSquare, Target, Zap, Save, Loader2, Image, Mic, FileText } from 'lucide-react'
+import { Brain, Settings, MessageSquare, Target, Zap, Save, Loader2, Image, Mic, FileText, Eye } from 'lucide-react'
 import { getAuthHeaders } from '@/lib/client-auth'
 import type { BotConfig } from '@/types'
 
@@ -481,6 +481,99 @@ export default function AIConfigPage() {
 
           {config.mediaProcessing?.enabled && (
             <>
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-medium mb-3 flex items-center space-x-2">
+                  <Eye className="h-4 w-4" />
+                  <span>OpenRouter Vision (Descrição de Imagens)</span>
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="openRouterEnabled">Habilitar OpenRouter Vision</Label>
+                      <div className="text-sm text-gray-600">
+                        Usa IA multimodal para descrever imagens (Sonoma Sky Alpha)
+                      </div>
+                    </div>
+                    <Switch
+                      checked={config.mediaProcessing?.openRouter?.enabled || false}
+                      onCheckedChange={(checked) => {
+                        setConfig({
+                          ...config,
+                          mediaProcessing: {
+                            ...config.mediaProcessing,
+                            openRouter: {
+                              ...config.mediaProcessing?.openRouter,
+                              enabled: checked
+                            }
+                          }
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {config.mediaProcessing?.openRouter?.enabled && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="openRouterApiKey">Chave da API OpenRouter</Label>
+                        <Input
+                          id="openRouterApiKey"
+                          type="password"
+                          placeholder="sk-or-v1-..."
+                          value={config.mediaProcessing?.openRouter?.apiKey || config.aiConfig?.apiKey || ''}
+                          onChange={(e) => {
+                            setConfig({
+                              ...config,
+                              mediaProcessing: {
+                                ...config.mediaProcessing,
+                                openRouter: {
+                                  ...config.mediaProcessing?.openRouter,
+                                  apiKey: e.target.value
+                                }
+                              }
+                            })
+                          }}
+                        />
+                        <p className="text-sm text-gray-600">
+                          Usa a mesma chave da configuração de IA se não especificada
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="imageModel">Modelo de Visão</Label>
+                        <Select
+                          value={config.mediaProcessing?.openRouter?.imageModel || 'openrouter/sonoma-sky-alpha'}
+                          onValueChange={(value) => {
+                            setConfig({
+                              ...config,
+                              mediaProcessing: {
+                                ...config.mediaProcessing,
+                                openRouter: {
+                                  ...config.mediaProcessing?.openRouter,
+                                  imageModel: value
+                                }
+                              }
+                            })
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="openrouter/sonoma-sky-alpha">Sonoma Sky Alpha (Grátis, 2M tokens)</SelectItem>
+                            <SelectItem value="openai/gpt-4o">GPT-4 Vision</SelectItem>
+                            <SelectItem value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</SelectItem>
+                            <SelectItem value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash (Grátis)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-sm text-gray-600">
+                          Modelo multimodal para descrever imagens
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
               <div className="border-t pt-4">
                 <h3 className="text-sm font-medium mb-3 flex items-center space-x-2">
                   <Image className="h-4 w-4" />

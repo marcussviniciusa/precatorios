@@ -6,6 +6,9 @@ interface MediaProcessorConfig {
   googleVisionKeyPath?: string
   groqEnabled?: boolean
   groqApiKey?: string
+  openRouterEnabled?: boolean
+  openRouterApiKey?: string
+  imageDescriptionModel?: string
 }
 
 class MediaProcessor {
@@ -52,13 +55,72 @@ class MediaProcessor {
   }
 
   async processImage(imageBuffer: Buffer, mimeType: string): Promise<string | null> {
+    // Primeiro tenta descrever a imagem com OpenRouter/Sonoma Sky Alpha
+    if (this.config.openRouterEnabled && this.config.openRouterApiKey) {
+      try {
+        console.log(`Describing image with ${this.config.imageDescriptionModel || 'openrouter/sonoma-sky-alpha'} (${mimeType})`)
+        
+        // Converter buffer para base64
+        const base64Image = imageBuffer.toString('base64')
+        const dataUrl = `data:${mimeType};base64,${base64Image}`
+        
+        // Fazer requisição para OpenRouter com modelo multimodal
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.config.openRouterApiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://precatorios.app',
+            'X-Title': 'Precatorios WhatsApp Bot'
+          },
+          body: JSON.stringify({
+            model: this.config.imageDescriptionModel || 'openrouter/sonoma-sky-alpha',
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'Descreva esta imagem em português brasileiro de forma detalhada. Se houver texto na imagem, transcreva-o também. Seja objetivo e claro.'
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: dataUrl
+                    }
+                  }
+                ]
+              }
+            ],
+            temperature: 0.3,
+            max_tokens: 500
+          })
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          const description = data.choices?.[0]?.message?.content
+          if (description) {
+            console.log(`Image description generated: ${description.substring(0, 100)}...`)
+            return description.trim()
+          }
+        } else {
+          const errorData = await response.json()
+          console.error('OpenRouter API error:', errorData)
+        }
+      } catch (error) {
+        console.error('Error describing image with OpenRouter:', error)
+      }
+    }
+    
+    // Fallback para OCR com Google Vision se configurado
     if (!this.visionClient || !this.config.googleVisionEnabled) {
-      console.log('Google Vision not configured for image processing')
+      console.log('No image processing method configured')
       return null
     }
 
     try {
-      console.log(`Processing image with Google Vision OCR (${mimeType})`)
+      console.log(`Fallback to Google Vision OCR (${mimeType})`)
       
       // Perform text detection
       const [result] = await this.visionClient.textDetection({
@@ -123,18 +185,36 @@ class MediaProcessor {
       console.log(`Transcribing audio with Groq Whisper (${mimeType})`)
       
       // Determine file extension from mimeType
-      const extension = mimeType.split('/')[1] || 'mp3'
+      const extension = mimeType.includes('ogg') ? 'ogg' : 
+                       mimeType.includes('mp3') ? 'mp3' :
+                       mimeType.includes('wav') ? 'wav' : 'mp3'
       
-      // Create a File object from buffer - convert to Uint8Array for proper typing
-      const audioFile = new File([new Uint8Array(audioBuffer)], `audio.${extension}`, { type: mimeType })
+      // Use Groq SDK with proper file handling for Node.js
+      const fs = require('fs')
+      const path = require('path')
+      const os = require('os')
       
-      // Transcribe using Groq
+      // Create temporary file
+      const tempFilePath = path.join(os.tmpdir(), `audio_${Date.now()}.${extension}`)
+      fs.writeFileSync(tempFilePath, audioBuffer)
+      
+      // Create readable stream for Groq SDK
+      const fileStream = fs.createReadStream(tempFilePath)
+      
+      // Add required properties to make it File-like
+      ;(fileStream as any).name = `audio.${extension}`
+      ;(fileStream as any).type = mimeType
+      
+      // Transcribe using Groq SDK
       const transcription = await this.groqClient.audio.transcriptions.create({
-        file: audioFile,
+        file: fileStream as any,
         model: 'whisper-large-v3',
         response_format: 'text',
-        language: 'pt' // Portuguese
+        language: 'pt'
       })
+      
+      // Clean up temp file
+      fs.unlinkSync(tempFilePath)
 
       const text = typeof transcription === 'string' ? transcription : transcription.text
       

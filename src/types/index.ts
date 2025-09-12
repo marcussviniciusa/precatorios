@@ -131,6 +131,11 @@ export interface BotConfig {
       enabled?: boolean
       apiKey?: string
     }
+    openRouter?: {
+      enabled?: boolean
+      apiKey?: string
+      imageModel?: string
+    }
   }
   updatedAt?: Date
   updatedBy?: string

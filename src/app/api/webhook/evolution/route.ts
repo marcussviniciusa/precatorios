@@ -165,7 +165,10 @@ export async function POST(request: NextRequest) {
                       googleVisionEnabled: config.mediaProcessing.googleVision?.enabled || false,
                       googleVisionKeyPath: config.mediaProcessing.googleVision?.keyPath || process.env.GOOGLE_VISION_KEY_PATH,
                       groqEnabled: config.mediaProcessing.groq?.enabled || false,
-                      groqApiKey: config.mediaProcessing.groq?.apiKey || process.env.GROQ_API_KEY
+                      groqApiKey: config.mediaProcessing.groq?.apiKey || process.env.GROQ_API_KEY,
+                      openRouterEnabled: config.mediaProcessing.openRouter?.enabled || false,
+                      openRouterApiKey: config.mediaProcessing.openRouter?.apiKey || config.aiConfig?.apiKey || process.env.OPENROUTER_API_KEY,
+                      imageDescriptionModel: config.mediaProcessing.openRouter?.imageModel || 'openrouter/sonoma-sky-alpha'
                     })
                     
                     if (mediaProcessor.isConfigured()) {
