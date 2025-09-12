@@ -54,6 +54,7 @@ Key entities (`src/types/index.ts`, `src/models/`):
 - **Lead**: Core entity with scoring, classification, and precatório details
 - **Conversation**: WhatsApp conversation management with message history
 - **WhatsAppInstance**: WhatsApp instance management with phone-based identification
+- **WhatsAppOfficial**: Official WhatsApp Business API accounts management
 - **BotConfig**: Dynamic bot behavior configuration (prompts, rules, schedules)
 - **Activity**: CRM tasks and interactions tracking
 - **User**: Role-based authentication (admin/manager/analyst)
@@ -69,6 +70,14 @@ Key entities (`src/types/index.ts`, `src/models/`):
   - `GET /api/evolution/connect/[instance]`: Generate QR code and extract phone number
   - `GET /api/evolution/status/[instance]`: Check connection status and update phone binding
   - `DELETE /api/evolution/delete/[instance]`: Soft delete instance from local DB
+- **Official WhatsApp API**: `/api/whatsapp-official/*` routes for Meta Business accounts
+  - `GET /api/whatsapp-official/accounts`: List configured official accounts
+  - `POST /api/whatsapp-official/accounts`: Create new official account
+  - `PUT /api/whatsapp-official/accounts/[id]`: Update official account
+  - `DELETE /api/whatsapp-official/accounts/[id]`: Delete official account
+  - `POST /api/whatsapp-official/test-webhook/[id]`: Test account connectivity
+- **Message Broadcasting**: `/api/broadcast/*` routes for mass message sending
+  - `POST /api/broadcast/send`: Send bulk messages via Evolution API or Official API
 
 ## Environment Configuration
 
@@ -96,15 +105,25 @@ The system implements phone-number-based instance management:
 4. **History Preservation**: Conversations linked to phone number, not instance name
 5. **Reactivation**: New instances with same phone inherit complete conversation history
 
-## Evolution API Integration
+## WhatsApp Integration Options
 
-The system uses Evolution API for WhatsApp integration:
+The system supports dual WhatsApp integration approaches:
+
+### Evolution API Integration
 - **Instance Management**: `/api/evolution/*` routes manage local database + Evolution API
 - **Webhook URL**: Must be configured as `{domain}/api/webhook/evolution`
 - **Required Events**: `MESSAGES_UPSERT`, `CONNECTION_UPDATE`, `APPLICATION_STARTUP`, `QRCODE_UPDATED`
 - **Auto-Response Logic**: Webhook processes messages and calculates lead scores
 - **Bot Configuration**: Controls response templates and transfer rules
 - **Message Management**: Mark messages as read to prevent Evolution API retries
+
+### WhatsApp Official API Integration
+- **Business Accounts**: `/api/whatsapp-official/*` routes manage Meta Business accounts
+- **Webhook URL**: Must be configured as `{domain}/api/webhook/whatsapp-official`
+- **Token Verification**: Each account has unique webhook verification token
+- **Message Processing**: Handles all message types (text, media, location, etc.)
+- **Statistics Tracking**: Monitors sent/received message counts per account
+- **API Compliance**: Full compliance with Meta's WhatsApp Business Platform
 
 ### Evolution API Troubleshooting
 When deleting leads but still receiving webhook messages:
@@ -158,6 +177,116 @@ The `PrecatoriosAI` class provides specialized methods:
 - **Temperature**: Control response creativity (0.1-1.0)
 - **Max Tokens**: Limit response length (50-2000 tokens)
 
+## Message Broadcasting System
+
+The system provides comprehensive message broadcasting capabilities through the `/broadcast` interface:
+
+### Broadcasting Features (`/broadcast`)
+- **Dual Source Support**: Choose between Evolution API instances or Official WhatsApp accounts
+- **Individual Numbers**: Manually add phone numbers one by one
+- **CSV Upload**: Bulk upload via CSV file with automatic phone number parsing
+- **Message Composition**: Rich text editor with character count
+- **Real-time Results**: Live statistics showing success/failure rates
+- **Detailed Reporting**: Per-number delivery status with error details
+
+### Broadcast Workflow
+1. **Source Selection**: Choose Evolution API instance or Official WhatsApp account
+2. **Message Creation**: Compose the message text (supports emojis and formatting)
+3. **Recipient Management**: Add numbers manually or upload CSV file
+4. **Validation**: System validates numbers and account status
+5. **Batch Processing**: Messages sent with rate limiting (100ms delay between sends)
+6. **Lead Integration**: Automatically creates leads for new numbers
+7. **Conversation Tracking**: All broadcast messages are saved to conversation history
+
+### Broadcast API (`/api/broadcast/send`)
+```json
+{
+  "source": "evolution" | "official",
+  "instanceId": "string", // Required for Evolution API
+  "officialAccountId": "string", // Required for Official API
+  "message": "string",
+  "phones": ["string[]"]
+}
+```
+
+### CSV Format Requirements
+- **Single Column**: Phone numbers only (no headers required)
+- **Clean Numbers**: Digits only, no symbols (e.g., 5511999999999)
+- **International Format**: Include country code (55 for Brazil)
+- **File Size**: Maximum 1000 numbers per broadcast for performance
+
+### Broadcasting Safeguards
+- **Rate Limiting**: 100ms delay between messages to prevent API throttling
+- **Number Validation**: Automatic formatting and validation of phone numbers
+- **Account Verification**: Checks that selected instance/account is active
+- **Error Handling**: Graceful failure handling with detailed error messages
+- **Message Limits**: Maximum 1000 recipients per broadcast operation
+
+### Lead Generation from Broadcasts
+- **Automatic Lead Creation**: New phone numbers automatically become leads
+- **Source Tracking**: Leads marked with source 'broadcast' or 'broadcast_official'
+- **Conversation History**: All broadcast messages saved to conversation records
+- **AI Integration**: Responses to broadcast messages enter normal AI workflow
+
+## WhatsApp Official API Management
+
+The system provides complete management of Meta WhatsApp Business accounts through the `/whatsapp-official` interface:
+
+### Official Account Configuration (`/whatsapp-official`)
+- **Account Management**: Create, edit, and delete Official WhatsApp Business accounts
+- **Multi-Account Support**: Manage multiple business phone numbers simultaneously
+- **Credential Security**: Secure storage of access tokens with masked display
+- **Connection Testing**: Built-in connectivity verification with Meta's API
+- **Webhook Configuration**: Automatic webhook setup with unique verification tokens
+- **Usage Statistics**: Track sent/received message counts per account
+
+### Required Meta Setup Information
+- **Phone Number ID**: Unique identifier from Meta Business Manager
+- **Access Token**: Long-lived access token from Meta Developer Console
+- **Business Account ID**: WhatsApp Business Account identifier (optional)
+- **Webhook URL**: Automatically configured as `{domain}/api/webhook/whatsapp-official`
+- **Webhook Token**: Auto-generated unique verification token per account
+
+### Account Management Features
+- **Visual Status Indicators**: Active/inactive account badges
+- **Last Used Tracking**: Monitor account activity with timestamps
+- **Bulk Operations**: Enable/disable multiple accounts simultaneously
+- **Connection Health**: Real-time API connectivity verification
+- **Error Diagnostics**: Detailed error messages with troubleshooting suggestions
+
+### Meta Developer Console Setup Guide
+1. **Create Meta App**: Visit [developers.facebook.com/apps](https://developers.facebook.com/apps)
+2. **Add WhatsApp Product**: Select "WhatsApp Business" from product catalog
+3. **Configure Business Account**: Set up WhatsApp Business Account in Meta Business Manager
+4. **Generate Access Token**: Create long-lived user access token with required permissions
+5. **Obtain Phone Number ID**: Copy Phone Number ID from WhatsApp > Getting Started
+6. **Configure Webhook**: Set webhook URL to `{your-domain}/api/webhook/whatsapp-official`
+7. **Verify Webhook**: Use the auto-generated webhook token for verification
+8. **Grant Permissions**: Ensure `whatsapp_business_messaging` permission is approved
+
+### Required Permissions
+- **`whatsapp_business_messaging`**: Send and receive messages
+- **`whatsapp_business_management`**: Manage business account settings
+- **Advanced Access**: Required for production use (submit for App Review)
+
+### Webhook Event Processing
+The system automatically processes these webhook events:
+- **Messages**: Text, images, videos, audio, documents, locations
+- **Message Status**: Sent, delivered, read, failed states
+- **Contact Updates**: Profile name and picture changes
+- **Business Profile**: Updates to business information
+
+### Official API vs Evolution API
+| Feature | Official API | Evolution API |
+|---------|--------------|---------------|
+| **Reliability** | Meta-guaranteed uptime | Third-party dependency |
+| **Compliance** | Full WhatsApp ToS compliance | May violate ToS |
+| **Setup Complexity** | Business verification required | Simple QR code |
+| **Message Limits** | Official rate limits | Unlimited (risk of ban) |
+| **Features** | Limited to approved features | Full WhatsApp Web features |
+| **Cost** | Per-conversation pricing | Free (hosting costs only) |
+| **Business Support** | Official Meta support | Community support |
+
 ## Real-time WebSocket System
 
 The system implements a complete real-time messaging infrastructure using Socket.IO:
@@ -204,6 +333,18 @@ Built on Radix UI + Tailwind with custom component library:
   - Displays connection history when instances are reused
   - QR code generation and real-time status updates
   - Visual indicators for reconnection vs new connection
+- **Message Broadcasting UI**: `/broadcast` page for mass message sending
+  - Dual source selection (Evolution API vs Official API)
+  - CSV upload with drag-and-drop interface
+  - Manual phone number management with add/remove controls
+  - Real-time broadcast results with success/failure statistics
+  - Message composition with character counter
+- **Official WhatsApp Management UI**: `/whatsapp-official` page for Meta Business accounts
+  - Account creation and editing forms with validation
+  - Connection testing with detailed error diagnostics
+  - Webhook configuration with auto-generated tokens
+  - Usage statistics and last activity tracking
+  - Step-by-step setup documentation with external links
 - **Real-time Indicators**: WebSocket connection status displayed throughout the interface
 
 ### Layout Architecture
@@ -274,10 +415,12 @@ MongoDB schemas use string references instead of ObjectId for TypeScript compati
 
 ### Key Database Rules:
 - **WhatsAppInstance**: `phoneNumber` field is unique (sparse index) - primary identifier for instances
+- **WhatsAppOfficial**: `phoneNumberId` field is unique - primary identifier for official accounts
 - **Lead/Conversation**: Use phone numbers consistently for linking conversations to instances
 - **Instance Reuse**: Same phone number can be reused by different instance names
 - **Soft Delete**: Instances marked `isActive: false` instead of hard deletion
 - **Connection History**: Maintained in `connectionHistory[]` array for audit trail
+- **Statistics Tracking**: Message counts and timestamps stored in `stats` subdocuments
 
 ## Testing and Deployment
 
@@ -336,3 +479,37 @@ curl -X POST "${EVOLUTION_API_URL}/chat/markMessageAsRead/INSTANCE_NAME" \
 - Network connectivity to database server
 - Authentication credentials expired
 - Database connection pool exhausted (restart server)
+
+#### 6. WhatsApp Official API Issues
+**Problem**: Official account connection fails
+**Solutions**:
+- Verify Access Token hasn't expired (tokens last 60 days)
+- Check Phone Number ID is correct in Meta Developer Console
+- Ensure webhook URL is publicly accessible (use ngrok for testing)
+- Confirm webhook token matches the one generated in the interface
+- Verify Business Account has required permissions approved
+
+#### 7. Message Broadcasting Failures
+**Problem**: Broadcast messages fail to send
+**Common causes**:
+- Selected instance/account is disconnected or inactive
+- Rate limiting by WhatsApp (too many messages too quickly)
+- Invalid phone numbers in the recipient list
+- Access token expired for Official API accounts
+- Instance banned or suspended for policy violations
+
+**Solutions**:
+- Test instance/account connectivity before broadcasting
+- Reduce broadcast size or add delays between batches
+- Validate phone number format (international format with country code)
+- Refresh access tokens in Official API accounts
+- Use Official API for better compliance and reliability
+
+#### 8. CSV Upload Issues
+**Problem**: CSV file not processing correctly
+**Solutions**:
+- Ensure file is saved as CSV format (not Excel)
+- Use single column with phone numbers only
+- Remove headers and formatting from the file
+- Check for special characters or non-numeric data
+- Validate file size doesn't exceed browser limits
