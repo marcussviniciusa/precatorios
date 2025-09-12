@@ -164,44 +164,45 @@ export default function LeadsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Leads</h1>
-          <p className="text-gray-600">Gerencie todos os seus leads de precatórios</p>
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Leads</h1>
+          <p className="text-sm sm:text-base text-gray-600">Gerencie todos os seus leads de precatórios</p>
         </div>
-        <Button>
+        <Button className="self-start sm:self-auto">
           <Plus className="w-4 h-4 mr-2" />
-          Novo Lead
+          <span className="hidden sm:inline">Novo Lead</span>
+          <span className="sm:hidden">Novo</span>
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-            <CardTitle className="flex items-center">
-              <Users className="w-5 h-5 mr-2" />
+          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+            <CardTitle className="flex items-center text-base sm:text-lg">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Leads ({filteredLeads.length})
             </CardTitle>
             
-            <div className="flex space-x-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Buscar leads..."
+                  placeholder="Buscar..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full sm:w-auto pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
               
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full sm:w-auto border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
-                <option value="all">Todos Status</option>
+                <option value="all">Status</option>
                 <option value="new">Novo</option>
                 <option value="qualified">Qualificado</option>
                 <option value="in_analysis">Em Análise</option>
@@ -213,9 +214,9 @@ export default function LeadsPage() {
               <select
                 value={classificationFilter}
                 onChange={(e) => setClassificationFilter(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full sm:w-auto border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
-                <option value="all">Todas Classificações</option>
+                <option value="all">Classificação</option>
                 <option value="hot">Quente</option>
                 <option value="warm">Morno</option>
                 <option value="cold">Frio</option>
@@ -244,23 +245,25 @@ export default function LeadsPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Nome</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Contato</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Score</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Classificação</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Valor</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Localização</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Responsável</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Última Interação</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <>
+              {/* Versão Desktop - Tabela */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Nome</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Contato</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Score</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Classificação</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Valor</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Localização</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Responsável</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Última Interação</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                   {filteredLeads.map((lead) => (
                     <tr key={lead._id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-4">
@@ -346,9 +349,88 @@ export default function LeadsPage() {
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Versão Mobile - Cards */}
+              <div className="lg:hidden space-y-4">
+                {filteredLeads.map((lead) => (
+                  <div key={lead._id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900 text-lg">{lead.name}</h3>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <div>{lead.phone}</div>
+                          {lead.email && <div>{lead.email}</div>}
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button variant="ghost" size="sm">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <MessageSquare className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDeleteClick(lead._id, lead.name)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-gray-500">Score:</span>
+                        <div className="flex items-center mt-1">
+                          <span className="font-medium text-lg mr-2">{lead.score}</span>
+                          <div className="w-16 bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className="bg-primary h-1.5 rounded-full"
+                              style={{ width: `${lead.score}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Classificação:</span>
+                        <div className="mt-1">{getClassificationBadge(lead.classification)}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Status:</span>
+                        <div className="mt-1">{getStatusBadge(lead.status)}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Valor:</span>
+                        <div className="mt-1 font-medium">
+                          {lead.precatorioValue ? formatCurrency(lead.precatorioValue) : '-'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {(lead.state && lead.city) && (
+                      <div className="mt-3 text-sm">
+                        <span className="text-gray-500">Localização:</span>
+                        <div className="mt-1">{lead.city}, {lead.state}</div>
+                      </div>
+                    )}
+                    
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center text-sm text-gray-500">
+                      <div>
+                        {lead.assignedTo ? `Responsável: ${lead.assignedTo}` : 'Não atribuído'}
+                      </div>
+                      <div>
+                        {formatDate(lead.lastInteraction)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

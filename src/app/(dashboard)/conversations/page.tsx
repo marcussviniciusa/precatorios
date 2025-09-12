@@ -624,9 +624,9 @@ export default function ConversationsPage() {
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
-      <div className="flex-shrink-0 flex justify-between items-center mb-6">
+      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 sm:mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 flex items-center space-x-2">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 flex items-center space-x-2">
             <span>Conversas</span>
             {isConnected ? (
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Conectado em tempo real" />
@@ -634,7 +634,7 @@ export default function ConversationsPage() {
               <div className="w-2 h-2 bg-red-500 rounded-full" title="Desconectado do tempo real" />
             )}
           </h1>
-          <p className="text-gray-600">Gerencie todas as conversas do WhatsApp</p>
+          <p className="text-sm sm:text-base text-gray-600">Gerencie todas as conversas do WhatsApp</p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline">
@@ -648,8 +648,8 @@ export default function ConversationsPage() {
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
-        <Card className="lg:col-span-1 flex flex-col overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 overflow-hidden">
+        <Card className="xl:col-span-1 flex flex-col overflow-hidden">
           <CardHeader className="flex-shrink-0">
             <CardTitle className="flex items-center justify-between">
               <span>Conversas ({conversations.length})</span>
@@ -746,7 +746,7 @@ export default function ConversationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2 flex flex-col overflow-hidden">
+        <Card className="xl:col-span-2 flex flex-col overflow-hidden">
           <CardHeader className="flex-shrink-0">
             <CardTitle className="flex items-center justify-between">
               <div className="flex flex-col">

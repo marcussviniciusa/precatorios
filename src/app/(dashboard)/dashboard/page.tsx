@@ -47,13 +47,13 @@ export default function DashboardPage() {
 
   if (!data) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Visão geral do sistema de precatórios</p>
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Dashboard</h1>
+          <p className="text-sm sm:text-base text-gray-600">Visão geral do sistema de precatórios</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
             title="Total de Leads"
             value="0"
@@ -84,7 +84,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <MetricCard
             title="Novos Leads Hoje"
             value="0"
@@ -105,7 +105,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="bg-white p-8 rounded-lg border text-center">
+        <div className="bg-white p-4 sm:p-8 rounded-lg border text-center">
           <div className="text-gray-400 mb-4">
             <Users className="w-16 h-16 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum dado disponível</h3>
@@ -119,13 +119,13 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600">Visão geral do sistema de precatórios</p>
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-600">Visão geral do sistema de precatórios</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total de Leads"
           value={data.totalLeads.toLocaleString()}
@@ -156,7 +156,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           title="Novos Leads Hoje"
           value={data.todayStats.newLeads}
@@ -177,15 +177,15 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-7">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 xl:grid-cols-7">
         <LeadsChart data={data.chartData.leadsOverTime} />
         <ConversionFunnel data={data.chartData.conversionFunnel} />
       </div>
 
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-7">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 xl:grid-cols-7">
         <RecentActivity />
-        <div className="lg:col-span-4">
-          <div className="bg-white p-6 rounded-lg border">
+        <div className="xl:col-span-4">
+          <div className="bg-white p-4 sm:p-6 rounded-lg border">
             <h3 className="text-lg font-medium mb-4">Distribuição de Pontuação</h3>
             <div className="space-y-3">
               {data.chartData.scoreDistribution.map((item, index) => (
@@ -194,13 +194,13 @@ export default function DashboardPage() {
                     {item.range}
                   </span>
                   <div className="flex items-center space-x-3">
-                    <div className="w-32 bg-gray-200 rounded-full h-2">
+                    <div className="w-20 sm:w-32 bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-primary h-2 rounded-full"
                         style={{ width: `${(item.count / data.totalLeads) * 100}%` }}
                       />
                     </div>
-                    <span className="text-sm text-gray-600 w-12 text-right">
+                    <span className="text-sm text-gray-600 w-8 sm:w-12 text-right">
                       {item.count}
                     </span>
                   </div>

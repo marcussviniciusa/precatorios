@@ -302,11 +302,11 @@ export default function WhatsAppConnectionPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Conexão WhatsApp</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">Conexão WhatsApp</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie suas conexões WhatsApp via Evolution API
           </p>
         </div>
@@ -314,13 +314,15 @@ export default function WhatsAppConnectionPage() {
           variant="outline"
           onClick={fetchInstances}
           disabled={loading}
+          className="self-start sm:self-auto"
         >
           {loading ? (
             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
           ) : (
             <RefreshCw className="w-4 h-4 mr-2" />
           )}
-          Atualizar
+          <span className="hidden sm:inline">Atualizar</span>
+          <span className="sm:hidden">Sync</span>
         </Button>
       </div>
 
