@@ -30,12 +30,14 @@ export class PrecatoriosAI {
   private apiKey: string
   private analysisModel: string
   private responseModel: string
+  private settings: any
   private baseUrl = 'https://openrouter.ai/api/v1/chat/completions'
 
-  constructor(apiKey: string, analysisModel: string, responseModel: string) {
+  constructor(apiKey: string, analysisModel: string, responseModel: string, settings: any) {
     this.apiKey = apiKey
     this.analysisModel = analysisModel
     this.responseModel = responseModel
+    this.settings = settings
   }
 
   private cleanJsonResponse(response: string): string {
@@ -74,8 +76,8 @@ export class PrecatoriosAI {
             { role: 'system', content: systemPrompt },
             { role: 'user', content: prompt }
           ],
-          temperature: 0.3,
-          max_tokens: 500
+          temperature: this.settings?.temperature || 0.3,
+          max_tokens: this.settings?.maxTokens || 500
         })
       })
 
@@ -248,7 +250,8 @@ export class PrecatoriosAI {
       return new PrecatoriosAI(
         config.aiConfig.apiKey,
         config.aiConfig.analysisModel,
-        config.aiConfig.responseModel
+        config.aiConfig.responseModel,
+        config.aiConfig.settings
       )
     } catch (error) {
       console.error('Error getting AI instance:', error)
