@@ -440,7 +440,8 @@ async function processMessageWithAI(
       const transferDecision = await ai.shouldTransfer(
         lead.score,
         conversationHistory,
-        conversation.messages.length
+        conversation.messages.length,
+        config.aiConfig.prompts.transfer
       )
 
       if (transferDecision.shouldTransfer) {

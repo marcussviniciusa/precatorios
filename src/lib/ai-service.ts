@@ -169,16 +169,17 @@ export class PrecatoriosAI {
   async shouldTransfer(
     leadScore: number,
     conversationHistory: string,
-    messageCount: number
+    messageCount: number,
+    customPrompt?: string
   ): Promise<TransferDecision> {
-    const systemPrompt = `Você é um assistente que decide quando transferir uma conversa para um humano.
+    const systemPrompt = customPrompt || `Você é um assistente que decide quando transferir uma conversa para um humano.
     Critérios para transferência:
     - Score >= 60: transferir com prioridade alta
     - Mensagens com urgência explícita: transferir imediatamente
     - Cliente pedindo atendimento humano: transferir sempre
     - Mais de 5 mensagens sem resolução: considerar transferência
     - Documentos enviados: transferir para análise
-    
+
     Retorne um JSON com: shouldTransfer (boolean), reason (string), priority (low/medium/high)`
 
     const prompt = `Score do lead: ${leadScore}

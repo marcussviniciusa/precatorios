@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 const bcrypt = require('bcryptjs')
 
 // Configuração do MongoDB
-const MONGODB_URI = 'mongodb://admin:Marcus1911Marcus@206.183.131.10:27017/precatorios5test?authSource=admin'
+const MONGODB_URI = 'mongodb://admin:Marcus1911Marcus@206.183.131.10:27017/precatorios?authSource=admin'
 
 // Schema do usuário
 const UserSchema = new mongoose.Schema({
