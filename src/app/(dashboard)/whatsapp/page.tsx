@@ -70,7 +70,7 @@ export default function WhatsAppConnectionPage() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Fetch existing instances
-  const fetchInstances = async () => {
+  const fetchInstances = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch('/api/evolution/instances')
@@ -92,7 +92,7 @@ export default function WhatsAppConnectionPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // Create new instance
   const createInstance = async () => {
@@ -208,7 +208,7 @@ export default function WhatsAppConnectionPage() {
     } catch (error) {
       console.error('Error checking status:', error)
     }
-  }, [])
+  }, [fetchInstances])
 
   // Delete instance
   const deleteInstance = async (instanceName: string) => {
@@ -241,7 +241,7 @@ export default function WhatsAppConnectionPage() {
   // Auto-refresh status
   useEffect(() => {
     fetchInstances()
-  }, [])
+  }, [fetchInstances])
 
   // Check status immediately when instances are loaded
   useEffect(() => {
@@ -250,7 +250,7 @@ export default function WhatsAppConnectionPage() {
         checkConnectionStatus(instance.instanceName)
       })
     }
-  }, [instances.length])
+  }, [instances, checkConnectionStatus])
 
   // Setup auto-refresh interval
   const setupInterval = useCallback(() => {

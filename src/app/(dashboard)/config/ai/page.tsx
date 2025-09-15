@@ -741,7 +741,7 @@ export default function AIConfigPage() {
                           <ol className="text-sm text-blue-700 mt-1 ml-4 list-decimal space-y-1">
                             <li>Acesse o <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-900">Google Cloud Console</a></li>
                             <li>Vá para APIs e Serviços → Credenciais</li>
-                            <li>Clique em "Criar credenciais" → "Chave da conta de serviço"</li>
+                            <li>Clique em &quot;Criar credenciais&quot; → &quot;Chave da conta de serviço&quot;</li>
                             <li>Selecione uma conta de serviço e baixe o arquivo JSON</li>
                             <li>Ative a API Vision no seu projeto Google Cloud</li>
                           </ol>

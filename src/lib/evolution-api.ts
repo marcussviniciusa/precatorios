@@ -142,4 +142,5 @@ class EvolutionAPI {
   }
 }
 
-export default new EvolutionAPI()
+const evolutionAPI = new EvolutionAPI()
+export default evolutionAPI

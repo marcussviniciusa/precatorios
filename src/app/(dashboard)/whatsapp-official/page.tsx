@@ -268,7 +268,7 @@ export default function WhatsAppOfficialPage() {
                   Criar um app no Meta Developers <ExternalLink className="w-3 h-3 ml-1" />
                 </a>
               </li>
-              <li>Adicionar o produto "WhatsApp Business" ao app</li>
+              <li>Adicionar o produto &quot;WhatsApp Business&quot; ao app</li>
               <li>Configurar um Business Account do WhatsApp</li>
               <li>Obter um Phone Number ID e Access Token</li>
               <li>
@@ -406,7 +406,7 @@ export default function WhatsAppOfficialPage() {
             <div className="text-center py-8">
               <Webhook className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">Nenhuma conta configurada ainda.</p>
-              <p className="text-sm text-gray-400">Clique em "Nova Conta" para começar.</p>
+              <p className="text-sm text-gray-400">Clique em &quot;Nova Conta&quot; para começar.</p>
             </div>
           ) : (
             <div className="space-y-4">
