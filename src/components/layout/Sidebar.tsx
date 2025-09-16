@@ -16,7 +16,6 @@ import {
   Brain,
   X,
   Send,
-  Webhook
 } from 'lucide-react'
 
 const navigation = [
@@ -39,11 +38,6 @@ const navigation = [
     name: 'Disparo de Mensagens',
     href: '/broadcast',
     icon: Send
-  },
-  {
-    name: 'WhatsApp API Oficial',
-    href: '/whatsapp-official',
-    icon: Webhook
   },
   {
     name: 'Leads',

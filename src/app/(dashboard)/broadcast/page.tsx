@@ -10,10 +10,10 @@ import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/Badge'
-import { 
-  Send, 
-  Users, 
-  MessageSquare, 
+import {
+  Send,
+  Users,
+  MessageSquare,
   Upload,
   Plus,
   X,
@@ -32,25 +32,14 @@ interface WhatsAppInstance {
   isConnected: boolean
 }
 
-interface OfficialAccount {
-  _id: string
-  name: string
-  phoneNumberId: string
-  accessToken: string
-  isActive: boolean
-}
-
 export default function BroadcastPage() {
   const [instances, setInstances] = useState<WhatsAppInstance[]>([])
-  const [officialAccounts, setOfficialAccounts] = useState<OfficialAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null)
 
   // Configuração da mensagem
-  const [selectedSource, setSelectedSource] = useState<'evolution' | 'official' | ''>('')
   const [selectedInstance, setSelectedInstance] = useState('')
-  const [selectedOfficial, setSelectedOfficial] = useState('')
   const [messageText, setMessageText] = useState('')
   const [phoneNumbers, setPhoneNumbers] = useState<string[]>([''])
   const [csvFile, setCsvFile] = useState<File | null>(null)
@@ -69,11 +58,11 @@ export default function BroadcastPage() {
 
   useEffect(() => {
     fetchInstances()
-    fetchOfficialAccounts()
   }, [])
 
   const fetchInstances = async () => {
     try {
+      setLoading(true)
       const response = await fetch('/api/evolution/instances')
       if (response.ok) {
         const data = await response.json()
@@ -81,18 +70,6 @@ export default function BroadcastPage() {
       }
     } catch (error) {
       console.error('Error fetching instances:', error)
-    }
-  }
-
-  const fetchOfficialAccounts = async () => {
-    try {
-      const response = await fetch('/api/whatsapp-official/accounts')
-      if (response.ok) {
-        const data = await response.json()
-        setOfficialAccounts(data.accounts || [])
-      }
-    } catch (error) {
-      console.error('Error fetching official accounts:', error)
     } finally {
       setLoading(false)
     }
@@ -114,29 +91,19 @@ export default function BroadcastPage() {
     setPhoneNumbers(updated)
   }
 
-  const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file && file.type === 'text/csv') {
-      setCsvFile(file)
-      setMessage({ type: 'success', text: 'Arquivo CSV carregado com sucesso!' })
-    } else {
-      setMessage({ type: 'error', text: 'Por favor, selecione um arquivo CSV válido.' })
-    }
-  }
-
   const processCsv = (csvContent: string): string[] => {
     const lines = csvContent.split('\n')
-    const phones: string[] = []
-    
-    lines.forEach((line, index) => {
-      if (index === 0 && line.toLowerCase().includes('telefone')) return // Skip header
-      const phone = line.split(',')[0].trim()
-      if (phone && phone.match(/^\d+$/)) {
-        phones.push(phone)
-      }
-    })
-    
+    const phones = lines
+      .map(line => line.trim().replace(/[^\d]/g, ''))
+      .filter(phone => phone.length >= 10)
     return phones
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setCsvFile(file)
+    }
   }
 
   const handleBroadcast = async () => {
@@ -145,18 +112,8 @@ export default function BroadcastPage() {
       return
     }
 
-    if (!selectedSource) {
-      setMessage({ type: 'error', text: 'Por favor, selecione uma fonte (Evolution API ou WhatsApp Oficial).' })
-      return
-    }
-
-    if (selectedSource === 'evolution' && !selectedInstance) {
-      setMessage({ type: 'error', text: 'Por favor, selecione uma instância do Evolution API.' })
-      return
-    }
-
-    if (selectedSource === 'official' && !selectedOfficial) {
-      setMessage({ type: 'error', text: 'Por favor, selecione uma conta oficial do WhatsApp.' })
+    if (!selectedInstance) {
+      setMessage({ type: 'error', text: 'Por favor, selecione uma instância do WhatsApp.' })
       return
     }
 
@@ -171,11 +128,13 @@ export default function BroadcastPage() {
         return
       }
     } else {
-      phonesToSend = phoneNumbers.filter(phone => phone.trim().length > 0)
+      phonesToSend = phoneNumbers
+        .map(phone => phone.trim().replace(/[^\d]/g, ''))
+        .filter(phone => phone.length >= 10)
     }
 
     if (phonesToSend.length === 0) {
-      setMessage({ type: 'error', text: 'Por favor, adicione pelo menos um número de telefone.' })
+      setMessage({ type: 'error', text: 'Por favor, adicione pelo menos um número válido.' })
       return
     }
 
@@ -190,28 +149,27 @@ export default function BroadcastPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          source: selectedSource,
-          instanceId: selectedSource === 'evolution' ? selectedInstance : undefined,
-          officialAccountId: selectedSource === 'official' ? selectedOfficial : undefined,
           message: messageText,
-          phones: phonesToSend
+          phones: phonesToSend,
+          instanceId: selectedInstance,
         })
       })
 
       const data = await response.json()
 
-      if (response.ok && data.success) {
+      if (response.ok) {
         setBroadcastResults(data.results)
-        setMessage({ 
-          type: 'success', 
-          text: `Disparo finalizado! ${data.results.success} enviados, ${data.results.failed} falharam.` 
+        setMessage({
+          type: 'success',
+          text: `Broadcast enviado! ${data.results.success} sucessos, ${data.results.failed} falhas.`
         })
       } else {
-        throw new Error(data.error || 'Erro no disparo')
+        setMessage({ type: 'error', text: data.error || 'Erro ao enviar broadcast.' })
       }
 
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Erro ao enviar mensagens.' })
+    } catch (error) {
+      console.error('Broadcast error:', error)
+      setMessage({ type: 'error', text: 'Erro ao conectar com o servidor.' })
     } finally {
       setSending(false)
     }
@@ -221,7 +179,7 @@ export default function BroadcastPage() {
     return (
       <div className="flex items-center justify-center h-48">
         <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Carregando...</span>
+        <span className="ml-2">Carregando instâncias...</span>
       </div>
     )
   }
@@ -230,22 +188,22 @@ export default function BroadcastPage() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <Send className="h-8 w-8 text-blue-600" />
+          <Send className="h-8 w-8 text-green-600" />
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Disparo de Mensagens</h1>
-            <p className="text-gray-600">Envie mensagens em massa via Evolution API ou WhatsApp Oficial</p>
+            <p className="text-gray-600">Envie mensagens em massa via WhatsApp</p>
           </div>
         </div>
       </div>
 
       {message && (
         <Alert className={
-          message.type === 'error' ? 'border-red-500 bg-red-50' : 
+          message.type === 'error' ? 'border-red-500 bg-red-50' :
           message.type === 'success' ? 'border-green-500 bg-green-50' :
           'border-blue-500 bg-blue-50'
         }>
           <AlertDescription className={
-            message.type === 'error' ? 'text-red-700' : 
+            message.type === 'error' ? 'text-red-700' :
             message.type === 'success' ? 'text-green-700' :
             'text-blue-700'
           }>
@@ -254,278 +212,226 @@ export default function BroadcastPage() {
         </Alert>
       )}
 
-      {/* Seleção da fonte */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <MessageSquare className="w-5 h-5 mr-2" />
-            Configuração do Envio
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Selecionar Fonte</Label>
-            <Select value={selectedSource} onValueChange={(value) => setSelectedSource(value as 'evolution' | 'official')}>
-              <SelectTrigger>
-                <SelectValue placeholder="Escolha entre Evolution API ou WhatsApp Oficial" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="evolution">Evolution API (Instâncias)</SelectItem>
-                <SelectItem value="official">WhatsApp API Oficial</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedSource === 'evolution' && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Configuração da Mensagem */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <MessageSquare className="w-5 h-5 mr-2" />
+              Configuração da Mensagem
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Seleção de Instância */}
             <div className="space-y-2">
-              <Label>Instância do Evolution API</Label>
+              <Label>Instância WhatsApp</Label>
               <Select value={selectedInstance} onValueChange={setSelectedInstance}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma instância" />
                 </SelectTrigger>
                 <SelectContent>
                   {instances
-                    .filter(instance => instance.isConnected)
-                    .map(instance => (
-                      <SelectItem key={instance._id} value={instance._id}>
+                    .filter(instance => instance.isConnected && instance.phoneNumber)
+                    .map((instance) => (
+                      <SelectItem key={instance.instanceName} value={instance.instanceName}>
                         <div className="flex items-center space-x-2">
+                          <Phone className="w-4 h-4" />
                           <span>{instance.instanceName}</span>
-                          {instance.phoneNumber && (
-                            <Badge variant="outline">
-                              <Phone className="w-3 h-3 mr-1" />
-                              {instance.phoneNumber}
-                            </Badge>
-                          )}
+                          <Badge variant="secondary" className="text-xs">
+                            {instance.phoneNumber}
+                          </Badge>
                         </div>
                       </SelectItem>
-                    ))}
+                    ))
+                  }
                 </SelectContent>
               </Select>
-              {instances.filter(i => i.isConnected).length === 0 && (
-                <p className="text-sm text-amber-600">
-                  <AlertTriangle className="w-4 h-4 inline mr-1" />
-                  Nenhuma instância conectada encontrada.
+              {instances.filter(i => i.isConnected && i.phoneNumber).length === 0 && (
+                <p className="text-sm text-red-600">
+                  Nenhuma instância conectada disponível. Conecte uma instância em WhatsApp &gt; Conexões.
                 </p>
               )}
             </div>
-          )}
 
-          {selectedSource === 'official' && (
+            {/* Texto da Mensagem */}
             <div className="space-y-2">
-              <Label>Conta Oficial do WhatsApp</Label>
-              <Select value={selectedOfficial} onValueChange={setSelectedOfficial}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma conta oficial" />
-                </SelectTrigger>
-                <SelectContent>
-                  {officialAccounts
-                    .filter(account => account.isActive)
-                    .map(account => (
-                      <SelectItem key={account._id} value={account._id}>
-                        <div className="flex items-center space-x-2">
-                          <span>{account.name}</span>
-                          <Badge variant="outline">{account.phoneNumberId}</Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              {officialAccounts.filter(a => a.isActive).length === 0 && (
-                <p className="text-sm text-amber-600">
-                  <AlertTriangle className="w-4 h-4 inline mr-1" />
-                  Nenhuma conta oficial ativa encontrada. Configure em WhatsApp API Oficial.
-                </p>
-              )}
+              <Label htmlFor="message">Mensagem</Label>
+              <Textarea
+                id="message"
+                placeholder="Digite sua mensagem aqui..."
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+              <div className="text-right text-sm text-gray-500">
+                {messageText.length}/1000 caracteres
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Configuração da mensagem */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <MessageSquare className="w-5 h-5 mr-2" />
-            Mensagem
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="message">Texto da Mensagem</Label>
-            <Textarea
-              id="message"
-              rows={4}
-              placeholder="Digite a mensagem que será enviada para todos os contatos..."
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-            />
-            <p className="text-sm text-gray-600">
-              A mensagem será enviada exatamente como digitada. Caracteres: {messageText.length}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Destinatários */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center">
+        {/* Destinatários */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
               <Users className="w-5 h-5 mr-2" />
               Destinatários
-            </div>
-            <div className="flex items-center space-x-3">
-              <Switch
-                checked={useCsv}
-                onCheckedChange={setUseCsv}
-              />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Switch para CSV */}
+            <div className="flex items-center space-x-2">
+              <Switch checked={useCsv} onCheckedChange={setUseCsv} />
               <Label>Usar arquivo CSV</Label>
             </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {useCsv ? (
-            <div className="space-y-4">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600 mb-2">
-                  Faça upload de um arquivo CSV com números de telefone
-                </p>
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleCsvUpload}
-                  className="hidden"
-                  id="csv-upload"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => document.getElementById('csv-upload')?.click()}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Selecionar Arquivo CSV
-                </Button>
-                {csvFile && (
-                  <p className="text-sm text-green-600 mt-2">
-                    <CheckCircle className="w-4 h-4 inline mr-1" />
-                    {csvFile.name} carregado
-                  </p>
-                )}
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
-                  <strong>Formato do CSV:</strong> Uma coluna com números de telefone (apenas números, sem símbolos).
-                  Exemplo: 5511999999999
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <Label>Números de Telefone</Label>
-              {phoneNumbers.map((phone, index) => (
-                <div key={index} className="flex items-center space-x-2">
+
+            {useCsv ? (
+              /* Upload de CSV */
+              <div className="space-y-2">
+                <Label htmlFor="csv-upload">Arquivo CSV</Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   <Input
-                    placeholder="Ex: 5511999999999"
-                    value={phone}
-                    onChange={(e) => updatePhoneNumber(index, e.target.value)}
+                    id="csv-upload"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    className="hidden"
                   />
-                  {phoneNumbers.length > 1 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removePhoneNumber(index)}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+                  <Label htmlFor="csv-upload" className="cursor-pointer">
+                    <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm text-gray-600">
+                      Clique para fazer upload do arquivo CSV
+                    </p>
+                  </Label>
+                  {csvFile && (
+                    <p className="text-sm text-green-600 mt-2">
+                      Arquivo selecionado: {csvFile.name}
+                    </p>
                   )}
                 </div>
-              ))}
-              <Button variant="outline" onClick={addPhoneNumber}>
-                <Plus className="w-4 h-4 mr-2" />
-                Adicionar Número
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <p className="text-xs text-gray-500">
+                  O arquivo deve conter uma coluna com números de telefone (apenas números)
+                </p>
+              </div>
+            ) : (
+              /* Números Manuais */
+              <div className="space-y-2">
+                <Label>Números de Telefone</Label>
+                {phoneNumbers.map((phone, index) => (
+                  <div key={index} className="flex space-x-2">
+                    <Input
+                      placeholder="Ex: 5511999999999"
+                      value={phone}
+                      onChange={(e) => updatePhoneNumber(index, e.target.value)}
+                    />
+                    {phoneNumbers.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removePhoneNumber(index)}
+                        className="text-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addPhoneNumber}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Número
+                </Button>
+              </div>
+            )}
 
-      {/* Botão de envio */}
-      <div className="flex justify-center">
-        <Button 
-          onClick={handleBroadcast}
-          disabled={sending}
-          size="lg"
-          className="px-8"
-        >
-          {sending ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Enviando...
-            </>
-          ) : (
-            <>
-              <Send className="w-4 h-4 mr-2" />
-              Enviar Mensagens
-            </>
-          )}
-        </Button>
+            {/* Botão de Envio */}
+            <Button
+              onClick={handleBroadcast}
+              disabled={sending}
+              className="w-full"
+            >
+              {sending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Enviar Broadcast
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Resultados do disparo */}
+      {/* Resultados */}
       {broadcastResults && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <BarChart3 className="w-5 h-5 mr-2" />
-              Resultados do Disparo
+              Resultados do Broadcast
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span className="font-medium">Sucessos</span>
+                </div>
                 <p className="text-2xl font-bold text-green-600">{broadcastResults.success}</p>
-                <p className="text-sm text-green-600">Enviados</p>
               </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                <XCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+
+              <div className="bg-red-50 p-4 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <XCircle className="w-5 h-5 text-red-600" />
+                  <span className="font-medium">Falhas</span>
+                </div>
                 <p className="text-2xl font-bold text-red-600">{broadcastResults.failed}</p>
-                <p className="text-sm text-red-600">Falharam</p>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  <span className="font-medium">Total</span>
+                </div>
                 <p className="text-2xl font-bold text-blue-600">
                   {broadcastResults.success + broadcastResults.failed}
                 </p>
-                <p className="text-sm text-blue-600">Total</p>
               </div>
             </div>
 
-            {broadcastResults.details.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="font-medium">Detalhes por Número</h3>
-                <div className="max-h-60 overflow-y-auto border rounded-lg">
-                  {broadcastResults.details.map((detail, index) => (
-                    <div
-                      key={index}
-                      className={`p-3 border-b last:border-b-0 flex items-center justify-between ${
-                        detail.status === 'success' ? 'bg-green-50' : 'bg-red-50'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        {detail.status === 'success' ? (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <XCircle className="w-4 h-4 text-red-600" />
-                        )}
-                        <span className="font-medium">{detail.phone}</span>
-                      </div>
-                      {detail.error && (
-                        <span className="text-sm text-red-600">{detail.error}</span>
+            {broadcastResults.details && broadcastResults.details.length > 0 && (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                <h4 className="font-medium">Detalhes por número:</h4>
+                {broadcastResults.details.map((result, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center justify-between p-2 rounded text-sm ${
+                      result.status === 'success'
+                        ? 'bg-green-50 text-green-700'
+                        : 'bg-red-50 text-red-700'
+                    }`}
+                  >
+                    <span>{result.phone}</span>
+                    <div className="flex items-center space-x-2">
+                      {result.status === 'success' ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        <XCircle className="w-4 h-4" />
                       )}
+                      <span>{result.status === 'success' ? 'Enviado' : result.error}</span>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

@@ -9,9 +9,16 @@ export interface WhatsAppInstance {
   ownerJid?: string
   profileName?: string
   profilePicUrl?: string
-  integration: string
+  integration: 'WHATSAPP-BAILEYS' | 'WHATSAPP-BUSINESS'
   token?: string
   webhookUrl?: string
+  // Campos específicos para WHATSAPP-BUSINESS (Meta Official API)
+  businessConfig?: {
+    accessToken?: string
+    phoneNumberId?: string
+    businessAccountId?: string
+    verifyToken?: string
+  }
   isActive: boolean
   createdBy: string
   createdAt?: Date
@@ -46,10 +53,18 @@ const WhatsAppInstanceSchema = new Schema<WhatsAppInstance>({
   profilePicUrl: String,
   integration: {
     type: String,
+    enum: ['WHATSAPP-BAILEYS', 'WHATSAPP-BUSINESS'],
     default: 'WHATSAPP-BAILEYS'
   },
   token: String,
   webhookUrl: String,
+  // Campos específicos para WHATSAPP-BUSINESS (Meta Official API)
+  businessConfig: {
+    accessToken: String,
+    phoneNumberId: String,
+    businessAccountId: String,
+    verifyToken: String
+  },
   isActive: {
     type: Boolean,
     default: true

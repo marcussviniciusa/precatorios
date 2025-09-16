@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import WhatsAppInstance from '@/models/WhatsAppInstance'
-import WhatsAppOfficial from '@/models/WhatsAppOfficial'
 import Lead from '@/models/Lead'
 import Conversation from '@/models/Conversation'
 
@@ -18,237 +17,106 @@ interface BroadcastResult {
   }>
 }
 
-async function sendViaEvolution(instanceId: string, phone: string, message: string) {
+async function sendViaEvolution(instanceName: string, phone: string, message: string) {
   try {
-    await dbConnect()
-    
-    // Buscar a instância
-    const instance = await WhatsAppInstance.findById(instanceId)
-    if (!instance || !instance.isActive) {
-      throw new Error('Instância não encontrada ou inativa')
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      throw new Error('Evolution API não configurada')
     }
 
-    // Formatar número para o padrão WhatsApp
-    const formattedPhone = phone.includes('@') ? phone : `${phone}@s.whatsapp.net`
-
-    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instance.instanceName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': EVOLUTION_API_KEY!
-      },
-      body: JSON.stringify({
-        number: formattedPhone,
-        text: message
-      })
-    })
-
-    if (!response.ok) {
-      const errorData = await response.text()
-      throw new Error(`Evolution API error: ${response.status} - ${errorData}`)
-    }
-
-    const data = await response.json()
-    
-    // Criar ou atualizar lead
-    try {
-      const cleanPhone = phone.replace(/\D/g, '')
-      
-      let lead = await Lead.findOne({ phone: cleanPhone })
-      if (!lead) {
-        lead = new Lead({
-          phone: cleanPhone,
-          name: `Lead ${cleanPhone}`,
-          source: 'broadcast',
-          status: 'new',
-          classification: 'cold',
-          score: 0
-        })
-        await lead.save()
-      }
-
-      // Criar conversa se não existir
-      let conversation = await Conversation.findOne({ 
-        leadId: lead._id,
-        phoneNumber: cleanPhone
-      })
-      
-      if (!conversation) {
-        conversation = new Conversation({
-          leadId: lead._id,
-          phoneNumber: cleanPhone,
-          status: 'active',
-          lastMessageAt: new Date(),
-          messages: []
-        })
-      }
-
-      // Adicionar mensagem à conversa
-      conversation.messages.push({
-        _id: data.key?.id || `broadcast_${Date.now()}`,
-        sender: 'bot',
-        content: message,
-        type: 'text',
-        timestamp: new Date(),
-        fromMe: true,
-        metadata: {
-          messageId: data.key?.id,
-          broadcast: true
-        }
-      })
-
-      conversation.lastMessageAt = new Date()
-      await conversation.save()
-
-    } catch (dbError) {
-      console.error('Database error during broadcast:', dbError)
-      // Continue mesmo com erro de banco, pois a mensagem foi enviada
-    }
-
-    return { success: true, data }
-    
-  } catch (error) {
-    console.error(`Evolution API send error for ${phone}:`, error)
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Erro desconhecido' 
-    }
-  }
-}
-
-async function sendViaOfficial(accountId: string, phone: string, message: string) {
-  try {
-    await dbConnect()
-    
-    // Buscar a conta oficial
-    const account = await WhatsAppOfficial.findById(accountId)
-    if (!account || !account.isActive) {
-      throw new Error('Conta oficial não encontrada ou inativa')
-    }
-
-    // Formatar número para WhatsApp (remover símbolos e adicionar código do país se necessário)
+    // Formatar número para WhatsApp (garantir que tenha o formato correto)
     let formattedPhone = phone.replace(/\D/g, '')
     if (!formattedPhone.startsWith('55')) {
       formattedPhone = '55' + formattedPhone
     }
 
-    const response = await fetch(`https://graph.facebook.com/v18.0/${account.phoneNumberId}/messages`, {
+    const whatsappId = `${formattedPhone}@s.whatsapp.net`
+
+    const payload = {
+      number: whatsappId,
+      text: message,
+      delay: 1000
+    }
+
+    console.log(`Sending message via Evolution to ${whatsappId}:`, payload)
+
+    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${account.accessToken}`
+        'apikey': EVOLUTION_API_KEY
       },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to: formattedPhone,
-        type: 'text',
-        text: {
-          body: message
-        }
-      })
+      body: JSON.stringify(payload)
     })
 
+    const responseData = await response.json()
+
     if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(`WhatsApp API error: ${response.status} - ${JSON.stringify(errorData)}`)
+      throw new Error(responseData.response?.message || responseData.message || 'Erro na Evolution API')
     }
 
-    const data = await response.json()
-    
-    // Atualizar estatísticas da conta
-    await account.incrementMessagesSent()
+    // Criar/atualizar lead
+    await dbConnect()
+    let lead = await Lead.findOne({ phone: formattedPhone })
 
-    // Criar ou atualizar lead
-    try {
-      const cleanPhone = phone.replace(/\D/g, '')
-      
-      let lead = await Lead.findOne({ phone: cleanPhone })
-      if (!lead) {
-        lead = new Lead({
-          phone: cleanPhone,
-          name: `Lead ${cleanPhone}`,
-          source: 'broadcast_official',
-          status: 'new',
-          classification: 'cold',
-          score: 0
-        })
-        await lead.save()
-      }
-
-      // Criar conversa se não existir
-      let conversation = await Conversation.findOne({ 
-        leadId: lead._id,
-        phoneNumber: cleanPhone
+    if (!lead) {
+      lead = await Lead.create({
+        phone: formattedPhone,
+        name: `Lead ${formattedPhone}`,
+        source: 'broadcast',
+        status: 'new',
+        classification: 'cold',
+        score: 0
       })
-      
-      if (!conversation) {
-        conversation = new Conversation({
-          leadId: lead._id,
-          phoneNumber: cleanPhone,
-          status: 'active',
-          lastMessageAt: new Date(),
-          messages: []
-        })
-      }
-
-      // Adicionar mensagem à conversa
-      conversation.messages.push({
-        _id: data.messages?.[0]?.id || `broadcast_official_${Date.now()}`,
-        sender: 'bot',
-        content: message,
-        type: 'text',
-        timestamp: new Date(),
-        fromMe: true,
-        metadata: {
-          messageId: data.messages?.[0]?.id,
-          broadcast: true,
-          source: 'whatsapp_official'
-        }
-      })
-
-      conversation.lastMessageAt = new Date()
-      await conversation.save()
-
-    } catch (dbError) {
-      console.error('Database error during official broadcast:', dbError)
-      // Continue mesmo com erro de banco, pois a mensagem foi enviada
     }
 
-    return { success: true, data }
-    
+    // Criar/atualizar conversa
+    let conversation = await Conversation.findOne({ leadId: lead._id.toString() })
+
+    if (!conversation) {
+      conversation = await Conversation.create({
+        leadId: lead._id.toString(),
+        whatsappId,
+        status: 'active',
+        messages: []
+      })
+    }
+
+    // Adicionar mensagem à conversa
+    const messageData = {
+      _id: responseData.key?.id || Date.now().toString(),
+      sender: 'bot',
+      content: message,
+      type: 'text',
+      timestamp: new Date(),
+      fromMe: true,
+      metadata: {
+        source: 'broadcast',
+        instanceName
+      }
+    }
+
+    conversation.messages.push(messageData)
+    conversation.lastMessageAt = new Date()
+    await conversation.save()
+
+    console.log(`Message sent successfully to ${phone}`)
+    return { success: true, data: responseData }
+
   } catch (error) {
-    console.error(`WhatsApp Official API send error for ${phone}:`, error)
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Erro desconhecido' 
-    }
+    console.error(`Error sending message to ${phone}:`, error)
+    return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' }
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { source, instanceId, officialAccountId, message, phones } = body
+    const { instanceId, message, phones } = body
 
     // Validações
-    if (!source || !message || !phones || !Array.isArray(phones)) {
+    if (!instanceId || !message || !phones || !Array.isArray(phones)) {
       return NextResponse.json(
-        { error: 'Parâmetros obrigatórios: source, message, phones' },
-        { status: 400 }
-      )
-    }
-
-    if (source === 'evolution' && !instanceId) {
-      return NextResponse.json(
-        { error: 'instanceId é obrigatório para source=evolution' },
-        { status: 400 }
-      )
-    }
-
-    if (source === 'official' && !officialAccountId) {
-      return NextResponse.json(
-        { error: 'officialAccountId é obrigatório para source=official' },
+        { error: 'Campos obrigatórios: instanceId, message, phones (array)' },
         { status: 400 }
       )
     }
@@ -262,35 +130,46 @@ export async function POST(request: NextRequest) {
 
     if (phones.length > 1000) {
       return NextResponse.json(
-        { error: 'Máximo de 1000 números por disparo' },
+        { error: 'Máximo de 1000 números por broadcast' },
         { status: 400 }
       )
     }
 
+    // Verificar se a instância existe e está ativa
+    await dbConnect()
+    const instance = await WhatsAppInstance.findOne({
+      instanceName: instanceId,
+      isActive: true
+    })
+
+    if (!instance) {
+      return NextResponse.json(
+        { error: 'Instância não encontrada ou inativa' },
+        { status: 404 }
+      )
+    }
+
+    // Processar envios
     const results: BroadcastResult = {
       success: 0,
       failed: 0,
       details: []
     }
 
-    // Processar cada número
+    console.log(`Starting broadcast to ${phones.length} numbers via instance ${instanceId}`)
+
     for (const phone of phones) {
-      if (!phone || typeof phone !== 'string') {
+      if (!phone || phone.trim().length < 10) {
         results.failed++
         results.details.push({
-          phone: phone || 'undefined',
+          phone: phone || 'empty',
           status: 'failed',
           error: 'Número inválido'
         })
         continue
       }
 
-      let result
-      if (source === 'evolution') {
-        result = await sendViaEvolution(instanceId, phone.trim(), message)
-      } else {
-        result = await sendViaOfficial(officialAccountId, phone.trim(), message)
-      }
+      const result = await sendViaEvolution(instanceId, phone.trim(), message)
 
       if (result.success) {
         results.success++
@@ -303,22 +182,24 @@ export async function POST(request: NextRequest) {
         results.details.push({
           phone: phone.trim(),
           status: 'failed',
-          error: result.error
+          error: result.error || 'Erro desconhecido'
         })
       }
 
-      // Pequeno delay entre envios para não sobrecarregar a API
+      // Delay entre mensagens para evitar rate limiting
       await new Promise(resolve => setTimeout(resolve, 100))
     }
+
+    console.log(`Broadcast completed: ${results.success} success, ${results.failed} failed`)
 
     return NextResponse.json({
       success: true,
       results,
-      message: `Disparo finalizado: ${results.success} enviados, ${results.failed} falharam`
+      message: `Broadcast enviado: ${results.success} sucessos, ${results.failed} falhas`
     })
 
   } catch (error) {
-    console.error('Broadcast send error:', error)
+    console.error('Broadcast error:', error)
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

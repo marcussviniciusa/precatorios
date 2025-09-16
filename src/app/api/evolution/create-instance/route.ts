@@ -17,10 +17,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Payload seguindo a documentação oficial Evolution API v2
+    const integration = body.integration || 'WHATSAPP-BAILEYS'
     const instanceData: any = {
       instanceName: body.instanceName,
-      integration: 'WHATSAPP-BAILEYS',
-      qrcode: true
+      integration,
+      qrcode: integration === 'WHATSAPP-BAILEYS' ? true : false,
+      token: body.token || Math.random().toString(36).substring(2, 15) // Token sempre obrigatório
+    }
+
+    // Adicionar configurações específicas para WHATSAPP-BUSINESS
+    if (integration === 'WHATSAPP-BUSINESS' && body.businessConfig) {
+      if (body.businessConfig.accessToken) {
+        instanceData.businessConfig = {
+          accessToken: body.businessConfig.accessToken,
+          phoneNumberId: body.businessConfig.phoneNumberId,
+          businessAccountId: body.businessConfig.businessAccountId
+        }
+
+        // Para WHATSAPP-BUSINESS, usar o phoneNumberId como número
+        // A Evolution API precisa de um número associado à instância
+        instanceData.number = body.businessConfig.phoneNumberId
+      }
     }
 
     // Adicionar webhook com estrutura completa
@@ -107,28 +124,42 @@ export async function POST(request: NextRequest) {
     
     if (existingInstance) {
       // Reativar instância existente
+      const updateData: any = {
+        state: 'close',
+        integration,
+        webhookUrl: instanceData.webhook?.url,
+        isActive: true,
+        updatedAt: new Date()
+      }
+
+      // Atualizar businessConfig apenas se for WHATSAPP-BUSINESS
+      if (integration === 'WHATSAPP-BUSINESS' && body.businessConfig) {
+        updateData.businessConfig = body.businessConfig
+      }
+
       instanceRecord = await WhatsAppInstance.findByIdAndUpdate(
         existingInstance._id,
-        {
-          state: 'close',
-          integration: 'WHATSAPP-BAILEYS',
-          webhookUrl: instanceData.webhook?.url,
-          isActive: true,
-          updatedAt: new Date()
-        },
+        updateData,
         { new: true }
       )
     } else {
       // Criar nova instância
-      instanceRecord = await WhatsAppInstance.create({
+      const createData: any = {
         instanceName: body.instanceName,
         state: 'close',
-        integration: 'WHATSAPP-BAILEYS',
+        integration,
         webhookUrl: instanceData.webhook?.url,
         isActive: true,
         createdBy: 'system', // TODO: usar usuário autenticado quando implementado
         connectionHistory: []
-      })
+      }
+
+      // Adicionar businessConfig apenas se for WHATSAPP-BUSINESS
+      if (integration === 'WHATSAPP-BUSINESS' && body.businessConfig) {
+        createData.businessConfig = body.businessConfig
+      }
+
+      instanceRecord = await WhatsAppInstance.create(createData)
     }
 
     return NextResponse.json({
