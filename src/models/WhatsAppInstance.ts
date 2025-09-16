@@ -88,6 +88,14 @@ WhatsAppInstanceSchema.index({ instanceName: 1 })
 WhatsAppInstanceSchema.index({ state: 1 })
 WhatsAppInstanceSchema.index({ createdBy: 1 })
 WhatsAppInstanceSchema.index({ isActive: 1 })
-WhatsAppInstanceSchema.index({ phoneNumber: 1, isActive: 1 }, { unique: true, sparse: true })
+// Índice único apenas para números ativos (evita conflito com multiple null values)
+WhatsAppInstanceSchema.index(
+  { phoneNumber: 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: { isActive: true }
+  }
+)
 
 export default models.WhatsAppInstance || model<WhatsAppInstance>('WhatsAppInstance', WhatsAppInstanceSchema)

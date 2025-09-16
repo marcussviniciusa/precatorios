@@ -40,22 +40,31 @@ export async function DELETE(
       )
     }
 
+    // Sempre limpar do banco local, independente da resposta da Evolution API
+    await dbConnect()
+
+    // Para evitar conflitos de índice único, deletar completamente instâncias órfãs
+    const localInstance = await WhatsAppInstance.findOneAndDelete(
+      { instanceName: instance }
+    )
+
     if (!response.ok) {
       console.error('Evolution API error:', data)
+
+      // Se a instância não existe na Evolution API (404),
+      // mas existe no banco local, considerar sucesso (limpeza)
+      if (response.status === 404 && localInstance) {
+        return NextResponse.json({
+          success: true,
+          message: 'Instância removida do banco local (já não existia na Evolution API)'
+        })
+      }
+
       return NextResponse.json(
         { error: data.message || 'Erro ao excluir instância' },
         { status: response.status }
       )
     }
-
-    // Remover instância do banco de dados local
-    await dbConnect()
-    
-    await WhatsAppInstance.findOneAndUpdate(
-      { instanceName: instance },
-      { isActive: false },
-      { new: true }
-    )
 
     return NextResponse.json({
       success: true,

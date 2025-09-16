@@ -10,6 +10,20 @@ export async function GET(
   try {
     const { instance } = params
 
+    // Primeiro, verificar se a instância existe no banco local
+    await dbConnect()
+    const localInstance = await WhatsAppInstance.findOne({
+      instanceName: instance,
+      isActive: true
+    })
+
+    if (!localInstance) {
+      return NextResponse.json(
+        { error: 'Instância não encontrada no banco local' },
+        { status: 404 }
+      )
+    }
+
     const evolutionApiUrl = process.env.EVOLUTION_API_URL
     const evolutionApiKey = process.env.EVOLUTION_API_KEY
 
@@ -43,6 +57,15 @@ export async function GET(
     }
 
     if (!response.ok) {
+      // Se instância não existe na Evolution API (404), marcar como inativa no banco local
+      if (response.status === 404) {
+        await localInstance.updateOne({ isActive: false })
+        return NextResponse.json(
+          { error: 'Instância não existe na Evolution API', instanceRemoved: true },
+          { status: 404 }
+        )
+      }
+
       console.error('Evolution API error:', data)
       return NextResponse.json(
         { error: data.message || 'Erro ao verificar status da instância' },

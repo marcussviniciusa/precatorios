@@ -211,6 +211,12 @@ export default function WhatsAppConnectionPage() {
       const response = await fetch(`/api/evolution/status/${instanceName}`)
       const data = await response.json()
 
+      // Se instância foi removida, atualizar lista local
+      if (data.instanceRemoved || response.status === 404) {
+        setInstances(prev => prev.filter(inst => inst.instanceName !== instanceName))
+        return
+      }
+
       if (response.ok) {
         setConnectionStatus(prev => ({
           ...prev,
