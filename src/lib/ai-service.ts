@@ -4,6 +4,7 @@ import BotConfig from '@/models/BotConfig'
 interface ExtractedInfo {
   name?: string
   phone?: string
+  cpf?: string
   hasPrecatorio?: boolean
   precatorioValue?: number
   state?: string
@@ -12,6 +13,7 @@ interface ExtractedInfo {
   documentType?: string
   precatorioType?: string
   isEligible?: boolean
+  escavadorData?: any
 }
 
 interface ScoreResult {
@@ -129,6 +131,22 @@ export class PrecatoriosAI {
   }
 
   async calculateScore(leadData: any, conversationHistory: string): Promise<ScoreResult> {
+    // Adicionar informações do Escavador no contexto se disponível
+    let escavadorContext = ''
+    if (leadData.escavadorData) {
+      escavadorContext = `
+
+    DADOS DO ESCAVADOR (Consulta automática):
+    - Processos encontrados: ${leadData.escavadorData.processosEncontrados}
+    - Valor total dos processos: R$ ${leadData.escavadorData.totalValue || 0}
+    - Processos elegíveis: ${leadData.escavadorData.hasEligibleProcessos ? 'SIM' : 'NÃO'}
+
+    BÔNUS DE PONTUAÇÃO DO ESCAVADOR:
+    - Se processos encontrados no Escavador: +30 pontos
+    - Se valor total > R$ 50.000: +15 pontos adicional
+    - Se múltiplos processos (>1): +10 pontos`
+    }
+
     const systemPrompt = `Você é um especialista em qualificação de leads de precatórios.
     Calcule um score de 0 a 100 baseado em:
     - Possui precatório confirmado: +40 pontos
@@ -137,21 +155,22 @@ export class PrecatoriosAI {
     - Demonstra urgência: +15 pontos
     - Enviou documentos: +10 pontos
     - Interesse claro: +5 pontos
-    
+    ${escavadorContext}
+
     Classifique como:
     - hot (80-100): Lead muito quente, pronto para fechar
     - warm (50-79): Lead interessado, precisa acompanhamento
     - cold (20-49): Lead frio, precisa nutrição
     - discard (0-19): Não qualificado
-    
+
     Retorne um JSON com: score (número), classification (string), reasoning (explicação breve)`
 
     const prompt = `Dados do lead:
     ${JSON.stringify(leadData, null, 2)}
-    
+
     Histórico de conversa:
     ${conversationHistory}
-    
+
     Calcule o score e classificação.`
 
     try {
@@ -211,16 +230,29 @@ export class PrecatoriosAI {
     conversationHistory: string,
     customPrompt: string
   ): Promise<string> {
-    const systemPrompt = customPrompt
+    // Enriquecer o prompt com dados do Escavador se disponível
+    let enrichedPrompt = customPrompt
+    if (leadData.escavadorData && leadData.escavadorData.processosEncontrados > 0) {
+      enrichedPrompt += `
+
+    IMPORTANTE - DADOS VERIFICADOS DO ESCAVADOR:
+    - Encontramos ${leadData.escavadorData.processosEncontrados} processo(s) em nome do cliente
+    - Valor total identificado: R$ ${leadData.escavadorData.totalValue || 0}
+    - Tribunais identificados: ${leadData.escavadorData.processos?.map((p: any) => p.tribunal).join(', ') || 'N/A'}
+
+    Use essas informações para personalizar sua resposta e demonstrar que já temos dados sobre os processos do cliente.`
+    }
+
+    const systemPrompt = enrichedPrompt
 
     const prompt = `Dados do lead:
     ${JSON.stringify(leadData, null, 2)}
-    
+
     Histórico de conversa:
     ${conversationHistory}
-    
+
     Última mensagem do cliente: ${message}
-    
+
     Gere uma resposta apropriada.`
 
     try {

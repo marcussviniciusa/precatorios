@@ -3,10 +3,12 @@ import dbConnect from '@/lib/mongodb'
 import Lead from '@/models/Lead'
 import Conversation from '@/models/Conversation'
 import BotConfig from '@/models/BotConfig'
+import WhatsAppInstance from '@/models/WhatsAppInstance'
 import { calculateLeadScore, getLeadClassification } from '@/lib/utils'
 import { broadcastNewMessage, broadcastConversationUpdated } from '@/lib/websocket'
 import { uploadBufferToMinio } from '@/lib/minio'
 import MediaProcessor from '@/lib/media-processor'
+import { EscavadorService, isValidCPF } from '@/lib/escavador-service'
 
 // Mapa global para controlar timeouts de processamento por conversa
 const processingTimeouts = new Map<string, NodeJS.Timeout>()
@@ -410,9 +412,40 @@ async function processMessageWithAI(
     // 1. Extrair informações do lead usando IA
     if (config.aiConfig.settings.autoExtraction) {
       const extractedInfo = await ai.extractLeadInfo(message, conversationHistory)
-      
+
       if (Object.keys(extractedInfo).length > 0) {
         console.log('AI extracted lead info:', extractedInfo)
+
+        // NOVO: Se CPF foi extraído e é válido, consultar Escavador
+        if (extractedInfo.cpf && isValidCPF(extractedInfo.cpf)) {
+          // Verificar se ainda não consultamos este CPF recentemente
+          const shouldConsult = !lead.escavadorData ||
+            !lead.escavadorData.ultimaConsulta ||
+            (new Date().getTime() - new Date(lead.escavadorData.ultimaConsulta).getTime()) > 24 * 60 * 60 * 1000 // 24 horas
+
+          if (shouldConsult) {
+            console.log(`[Escavador] CPF detectado: ${extractedInfo.cpf}. Iniciando consulta...`)
+
+            const escavadorService = EscavadorService.getInstance()
+            if (escavadorService) {
+              const escavadorData = await escavadorService.buscarProcessosPorCPF(extractedInfo.cpf)
+
+              if (escavadorData) {
+                console.log(`[Escavador] Dados encontrados: ${escavadorData.processosEncontrados} processos`)
+                extractedInfo.escavadorData = escavadorData
+
+                // Atualizar informações baseadas nos dados do Escavador
+                if (escavadorData.hasEligibleProcessos) {
+                  extractedInfo.hasPrecatorio = true
+                  if (escavadorData.totalValue > 0) {
+                    extractedInfo.precatorioValue = escavadorData.totalValue
+                  }
+                }
+              }
+            }
+          }
+        }
+
         await Lead.findByIdAndUpdate(lead._id, extractedInfo)
         // Atualizar lead local com as novas informações
         Object.assign(lead, extractedInfo)

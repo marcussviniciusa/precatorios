@@ -16,6 +16,7 @@ export interface Lead {
   name: string
   phone: string
   email?: string
+  cpf?: string
   whatsappId: string
   status: 'new' | 'qualified' | 'in_analysis' | 'proposal' | 'closed_won' | 'closed_lost'
   classification: 'hot' | 'warm' | 'cold' | 'discard'
@@ -35,6 +36,27 @@ export interface Lead {
   createdAt?: Date
   updatedAt?: Date
   lastInteraction?: Date
+  escavadorData?: {
+    consultedAt: Date
+    processosEncontrados: number
+    ultimaConsulta: Date
+    processos: Array<{
+      numeroProcesso: string
+      tribunal: string
+      valor?: number
+      status?: string
+      dataInicio?: Date
+      ultimaMovimentacao?: Date
+      tipo?: string
+      assunto?: string
+      partes?: {
+        ativo?: string
+        passivo?: string
+      }
+    }>
+    totalValue?: number
+    hasEligibleProcessos?: boolean
+  }
 }
 
 export interface Conversation {

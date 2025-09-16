@@ -5,6 +5,7 @@ const LeadSchema = new Schema<Lead>({
   name: { type: String, required: true },
   phone: { type: String, required: true, unique: true },
   email: String,
+  cpf: String,
   whatsappId: { type: String, required: true, unique: true },
   status: {
     type: String,
@@ -33,7 +34,29 @@ const LeadSchema = new Schema<Lead>({
   source: { type: String, required: true, default: 'whatsapp' },
   notes: String,
   tags: [String],
-  lastInteraction: { type: Date, default: Date.now }
+  lastInteraction: { type: Date, default: Date.now },
+  // Dados do Escavador
+  escavadorData: {
+    consultedAt: Date,
+    processosEncontrados: Number,
+    ultimaConsulta: Date,
+    processos: [{
+      numeroProcesso: String,
+      tribunal: String,
+      valor: Number,
+      status: String,
+      dataInicio: Date,
+      ultimaMovimentacao: Date,
+      tipo: String,
+      assunto: String,
+      partes: {
+        ativo: String,
+        passivo: String
+      }
+    }],
+    totalValue: Number,
+    hasEligibleProcessos: Boolean
+  }
 }, {
   timestamps: true
 })
