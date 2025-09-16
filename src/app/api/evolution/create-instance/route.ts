@@ -28,15 +28,17 @@ export async function POST(request: NextRequest) {
     // Adicionar configurações específicas para WHATSAPP-BUSINESS
     if (integration === 'WHATSAPP-BUSINESS' && body.businessConfig) {
       if (body.businessConfig.accessToken) {
+        // Evolution API espera campos diretos, não nested em businessConfig
+        instanceData.token = body.businessConfig.accessToken  // Token permanente do BM
+        instanceData.number = body.businessConfig.phoneNumberId  // Phone Number ID
+        instanceData.businessId = body.businessConfig.businessAccountId  // Business Account ID
+
+        // Manter businessConfig no banco local para referência
         instanceData.businessConfig = {
           accessToken: body.businessConfig.accessToken,
           phoneNumberId: body.businessConfig.phoneNumberId,
           businessAccountId: body.businessConfig.businessAccountId
         }
-
-        // Para WHATSAPP-BUSINESS, usar o phoneNumberId como número
-        // A Evolution API precisa de um número associado à instância
-        instanceData.number = body.businessConfig.phoneNumberId
       }
     }
 
@@ -57,9 +59,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Adiciona campos opcionais apenas se fornecidos
-    if (body.token) instanceData.token = body.token
-    if (body.number) instanceData.number = body.number
+    // Adiciona campos opcionais apenas se fornecidos (não sobrescrever BUSINESS)
+    if (body.token && integration !== 'WHATSAPP-BUSINESS') instanceData.token = body.token
+    if (body.number && integration !== 'WHATSAPP-BUSINESS') instanceData.number = body.number
     if (body.msgCall) instanceData.msgCall = body.msgCall
 
     console.log('Creating instance with data:', instanceData)
