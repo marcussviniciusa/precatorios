@@ -132,9 +132,13 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date()
       }
 
-      // Atualizar businessConfig apenas se for WHATSAPP-BUSINESS
+      // Atualizar businessConfig e phoneNumber para WHATSAPP-BUSINESS
       if (integration === 'WHATSAPP-BUSINESS' && body.businessConfig) {
         updateData.businessConfig = body.businessConfig
+        // Para BUSINESS API, usar phoneNumberId como phoneNumber
+        if (body.businessConfig.phoneNumberId) {
+          updateData.phoneNumber = body.businessConfig.phoneNumberId
+        }
       }
 
       instanceRecord = await WhatsAppInstance.findByIdAndUpdate(
@@ -154,9 +158,13 @@ export async function POST(request: NextRequest) {
         connectionHistory: []
       }
 
-      // Adicionar businessConfig apenas se for WHATSAPP-BUSINESS
+      // Adicionar businessConfig e phoneNumber para WHATSAPP-BUSINESS
       if (integration === 'WHATSAPP-BUSINESS' && body.businessConfig) {
         createData.businessConfig = body.businessConfig
+        // Para BUSINESS API, usar phoneNumberId como phoneNumber
+        if (body.businessConfig.phoneNumberId) {
+          createData.phoneNumber = body.businessConfig.phoneNumberId
+        }
       }
 
       instanceRecord = await WhatsAppInstance.create(createData)

@@ -88,13 +88,16 @@ WhatsAppInstanceSchema.index({ instanceName: 1 })
 WhatsAppInstanceSchema.index({ state: 1 })
 WhatsAppInstanceSchema.index({ createdBy: 1 })
 WhatsAppInstanceSchema.index({ isActive: 1 })
-// Índice único apenas para números ativos (evita conflito com multiple null values)
+// Índice único para números ativos, mas permite múltiplas instâncias BUSINESS sem phoneNumber
 WhatsAppInstanceSchema.index(
-  { phoneNumber: 1 },
+  { phoneNumber: 1, integration: 1 },
   {
     unique: true,
     sparse: true,
-    partialFilterExpression: { isActive: true }
+    partialFilterExpression: {
+      isActive: true,
+      phoneNumber: { $ne: null }
+    }
   }
 )
 
