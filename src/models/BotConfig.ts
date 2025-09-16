@@ -121,6 +121,12 @@ Regras importantes:
       imageModel: { type: String, default: 'openrouter/sonoma-sky-alpha' }
     }
   },
+  escavadorConfig: {
+    enabled: { type: Boolean, default: false },
+    apiKey: String,
+    cacheHours: { type: Number, default: 24 },
+    maxProcessos: { type: Number, default: 10 }
+  },
   updatedBy: { type: String, ref: 'User' }
 }, {
   timestamps: true

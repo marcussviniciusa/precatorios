@@ -416,12 +416,13 @@ async function processMessageWithAI(
       if (Object.keys(extractedInfo).length > 0) {
         console.log('AI extracted lead info:', extractedInfo)
 
-        // NOVO: Se CPF foi extraído e é válido, consultar Escavador
-        if (extractedInfo.cpf && isValidCPF(extractedInfo.cpf)) {
+        // NOVO: Se CPF foi extraído e é válido, consultar Escavador (apenas se estiver habilitado)
+        if (extractedInfo.cpf && isValidCPF(extractedInfo.cpf) && config.escavadorConfig?.enabled) {
           // Verificar se ainda não consultamos este CPF recentemente
+          const cacheHours = config.escavadorConfig?.cacheHours || 24
           const shouldConsult = !lead.escavadorData ||
             !lead.escavadorData.ultimaConsulta ||
-            (new Date().getTime() - new Date(lead.escavadorData.ultimaConsulta).getTime()) > 24 * 60 * 60 * 1000 // 24 horas
+            (new Date().getTime() - new Date(lead.escavadorData.ultimaConsulta).getTime()) > cacheHours * 60 * 60 * 1000
 
           if (shouldConsult) {
             console.log(`[Escavador] CPF detectado: ${extractedInfo.cpf}. Iniciando consulta...`)
@@ -444,6 +445,8 @@ async function processMessageWithAI(
               }
             }
           }
+        } else if (extractedInfo.cpf && isValidCPF(extractedInfo.cpf) && !config.escavadorConfig?.enabled) {
+          console.log(`[Escavador] CPF detectado mas integração está desabilitada`)
         }
 
         await Lead.findByIdAndUpdate(lead._id, extractedInfo)
@@ -452,10 +455,13 @@ async function processMessageWithAI(
       }
     }
 
+    // Verificar se Escavador está habilitado (usar em múltiplos lugares)
+    const escavadorEnabled = config.escavadorConfig?.enabled || false
+
     // 2. Calcular score usando IA
     if (config.aiConfig.settings.autoScoring) {
-      const scoreResult = await ai.calculateScore(lead, conversationHistory)
-      
+      const scoreResult = await ai.calculateScore(lead, conversationHistory, escavadorEnabled)
+
       if (scoreResult.score !== lead.score) {
         console.log(`AI calculated new score: ${scoreResult.score} (${scoreResult.classification})`)
         await Lead.findByIdAndUpdate(lead._id, {
@@ -492,7 +498,8 @@ async function processMessageWithAI(
       message,
       lead,
       conversationHistory,
-      config.aiConfig.prompts.response
+      config.aiConfig.prompts.response,
+      escavadorEnabled
     )
 
     // Enviar mensagem via Evolution API

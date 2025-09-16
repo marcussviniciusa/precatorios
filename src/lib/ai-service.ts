@@ -130,10 +130,10 @@ export class PrecatoriosAI {
     }
   }
 
-  async calculateScore(leadData: any, conversationHistory: string): Promise<ScoreResult> {
-    // Adicionar informações do Escavador no contexto se disponível
+  async calculateScore(leadData: any, conversationHistory: string, escavadorEnabled: boolean = true): Promise<ScoreResult> {
+    // Adicionar informações do Escavador no contexto se disponível E habilitado
     let escavadorContext = ''
-    if (leadData.escavadorData) {
+    if (escavadorEnabled && leadData.escavadorData) {
       escavadorContext = `
 
     DADOS DO ESCAVADOR (Consulta automática):
@@ -228,11 +228,12 @@ export class PrecatoriosAI {
     message: string,
     leadData: any,
     conversationHistory: string,
-    customPrompt: string
+    customPrompt: string,
+    escavadorEnabled: boolean = true
   ): Promise<string> {
-    // Enriquecer o prompt com dados do Escavador se disponível
+    // Enriquecer o prompt com dados do Escavador se disponível E habilitado
     let enrichedPrompt = customPrompt
-    if (leadData.escavadorData && leadData.escavadorData.processosEncontrados > 0) {
+    if (escavadorEnabled && leadData.escavadorData && leadData.escavadorData.processosEncontrados > 0) {
       enrichedPrompt += `
 
     IMPORTANTE - DADOS VERIFICADOS DO ESCAVADOR:

@@ -177,6 +177,64 @@ The `PrecatoriosAI` class provides specialized methods:
 - **Temperature**: Control response creativity (0.1-1.0)
 - **Max Tokens**: Limit response length (50-2000 tokens)
 
+## Escavador API Integration
+
+The system includes complete integration with Escavador API for automatic legal process consultation and lead enrichment:
+
+### Escavador Features (`/config/ai` - Escavador section)
+- **Automatic CPF Detection**: Identifies and validates CPF from WhatsApp messages
+- **Real-time API Consultation**: Queries Escavador API when valid CPF is detected
+- **Intelligent Process Filtering**: Identifies precatório-relevant legal processes
+- **Lead Enrichment**: Automatically updates lead profile with found processes
+- **AI Score Boosting**: Adds bonus points based on found processes (+30 base, +15 for high value, +10 for multiple)
+- **Personalized Responses**: AI mentions specific processes found in responses
+
+### Escavador Configuration (`/config/ai`)
+- **API Key Management**: Secure storage of Escavador API credentials
+- **Cache Control**: Configurable cache duration (default: 24 hours)
+- **Process Limits**: Maximum processes to analyze per consultation
+- **Complete Toggle**: Enable/disable entire integration instantly
+
+### Escavador Data Structure
+Automatically extracts and stores:
+- **Process Details**: CNJ number, court, case class, subject
+- **Financial Information**: Case values and total amounts
+- **Timeline Data**: Start dates and last movements
+- **Party Information**: Active and passive parties
+- **Court Classification**: Federal, state, municipal, or labor courts
+
+### Process Relevance Filtering
+Automatically identifies precatório-eligible processes based on:
+- **Court Types**: Federal (TRF), State (TJ), Municipal, Labor (TRT)
+- **Case Subjects**: Execution, treasury, INSS, social security
+- **Parties**: Cases against public entities (Union, State, Municipality)
+- **Process Classes**: Execution, compliance, monitoring procedures
+
+### Escavador Workflow
+1. **CPF Detection**: AI extracts CPF from WhatsApp message
+2. **Cache Check**: Verifies if CPF was recently consulted
+3. **API Query**: Calls real Escavador API endpoint
+4. **Process Analysis**: Filters relevant precatório processes
+5. **Lead Update**: Stores process data in lead profile
+6. **Score Calculation**: AI recalculates score with Escavador bonus
+7. **Response Generation**: AI creates personalized response with process data
+
+### Environment Variables
+```env
+ESCAVADOR_API_KEY=your_escavador_api_key_here
+```
+
+### Complete Disable Functionality
+When disabled (`enabled: false`):
+- ❌ No API consultations performed
+- ❌ No bonus points in AI scoring
+- ❌ No process data in AI responses
+- ❌ No Escavador data processing or storage
+- ✅ Normal CPF detection and storage continues
+- ✅ System operates normally without integration
+
+For detailed implementation information, see `ESCAVADOR_INTEGRATION.md`.
+
 ## Message Broadcasting System
 
 The system provides comprehensive message broadcasting capabilities through the `/broadcast` interface:

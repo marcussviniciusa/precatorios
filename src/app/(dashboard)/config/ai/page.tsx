@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Brain, Settings, MessageSquare, Target, Zap, Save, Loader2, Image, Mic, FileText, Eye, Upload, CheckCircle, X } from 'lucide-react'
+import { Brain, Settings, MessageSquare, Target, Zap, Save, Loader2, Image, Mic, FileText, Eye, Upload, CheckCircle, X, Search } from 'lucide-react'
 import { getAuthHeaders } from '@/lib/client-auth'
 import type { BotConfig } from '@/types'
 
@@ -806,6 +806,130 @@ export default function AIConfigPage() {
                       <p className="text-sm text-gray-600">
                         Chave de API do Groq para transcrição de áudio
                       </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-medium mb-3 flex items-center space-x-2">
+                  <Search className="h-4 w-4" />
+                  <span>Escavador API (Busca Jurídica)</span>
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="escavadorEnabled">Habilitar Escavador</Label>
+                      <div className="text-sm text-gray-600">
+                        Consulta automática de processos quando CPF for fornecido
+                      </div>
+                    </div>
+                    <Switch
+                      checked={config.escavadorConfig?.enabled || false}
+                      onCheckedChange={(checked) => {
+                        setConfig({
+                          ...config,
+                          escavadorConfig: {
+                            ...config.escavadorConfig,
+                            enabled: checked
+                          }
+                        })
+                      }}
+                    />
+                  </div>
+
+                  {config.escavadorConfig?.enabled && (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="escavadorApiKey">Chave da API Escavador</Label>
+                        <Input
+                          id="escavadorApiKey"
+                          type="password"
+                          placeholder="Sua chave da API do Escavador"
+                          value={config.escavadorConfig?.apiKey || ''}
+                          onChange={(e) => {
+                            setConfig({
+                              ...config,
+                              escavadorConfig: {
+                                ...config.escavadorConfig,
+                                apiKey: e.target.value
+                              }
+                            })
+                          }}
+                        />
+                        <p className="text-sm text-gray-600">
+                          Obtenha sua chave em <a href="https://api.escavador.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">api.escavador.com</a>
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Configurações da Consulta</Label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="escavadorCacheHours">Cache (horas)</Label>
+                            <Input
+                              id="escavadorCacheHours"
+                              type="number"
+                              min="1"
+                              max="168"
+                              placeholder="24"
+                              value={config.escavadorConfig?.cacheHours || 24}
+                              onChange={(e) => {
+                                setConfig({
+                                  ...config,
+                                  escavadorConfig: {
+                                    ...config.escavadorConfig,
+                                    cacheHours: parseInt(e.target.value) || 24
+                                  }
+                                })
+                              }}
+                            />
+                            <p className="text-xs text-gray-600">
+                              Tempo para reutilizar dados já consultados
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="escavadorMaxProcessos">Máx. Processos</Label>
+                            <Input
+                              id="escavadorMaxProcessos"
+                              type="number"
+                              min="1"
+                              max="50"
+                              placeholder="10"
+                              value={config.escavadorConfig?.maxProcessos || 10}
+                              onChange={(e) => {
+                                setConfig({
+                                  ...config,
+                                  escavadorConfig: {
+                                    ...config.escavadorConfig,
+                                    maxProcessos: parseInt(e.target.value) || 10
+                                  }
+                                })
+                              }}
+                            />
+                            <p className="text-xs text-gray-600">
+                              Limite de processos por consulta
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <h4 className="text-sm font-medium text-blue-800 mb-2">Como funciona:</h4>
+                        <ul className="text-xs text-blue-700 space-y-1">
+                          <li>• Quando um CPF válido é detectado na conversa</li>
+                          <li>• O sistema consulta automaticamente o Escavador</li>
+                          <li>• Encontra processos relacionados ao CPF</li>
+                          <li>• Aumenta o score do lead se processos elegíveis forem encontrados</li>
+                          <li>• A IA usa essas informações para personalizar as respostas</li>
+                        </ul>
+                      </div>
+
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span>Integração automática: busca processos sem intervenção manual</span>
+                      </div>
                     </div>
                   )}
                 </div>

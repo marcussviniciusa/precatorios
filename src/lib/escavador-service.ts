@@ -1,18 +1,57 @@
-// Mock do Escavador SDK - Substitua com a integração real
+// Interfaces baseadas na estrutura real da API Escavador
 interface ProcessoEscavador {
   numero_cnj: string
-  fontes: Array<{ nome: string }>
-  data_inicio?: string
-  data_ultima_movimentacao?: string
-  titulo_polo_ativo?: string
-  titulo_polo_passivo?: string
-  assunto?: string
-  valor?: number
+  titulo_polo_ativo: string
+  titulo_polo_passivo: string
+  ano_inicio: number
+  data_inicio: string
+  data_ultima_movimentacao: string
+  estado_origem: {
+    nome: string
+    sigla: string
+  }
+  fontes: Array<{
+    id: number
+    descricao: string
+    nome: string
+    sigla: string
+    tipo: string
+    grau?: number
+    capa?: {
+      classe?: string
+      assunto?: string
+      valor_causa?: {
+        valor: string
+        valor_formatado: string
+      }
+      assuntos_normalizados?: Array<{
+        nome: string
+        path_completo: string
+      }>
+    }
+  }>
+  match_documento_por: string
+  tipo_match: string
+  quantidade_movimentacoes: number
 }
 
 interface EnvolvidoEscavador {
   nome: string
-  cpf: string
+  outros_nomes: string[]
+  tipo_pessoa: string
+  quantidade_processos: number
+  cpfs_com_esse_nome: number
+}
+
+interface EscavadorResponse {
+  envolvido_encontrado: EnvolvidoEscavador
+  items: ProcessoEscavador[]
+  links: {
+    next: string | null
+  }
+  paginator: {
+    per_page: number
+  }
 }
 
 export class EscavadorService {
@@ -24,7 +63,7 @@ export class EscavadorService {
   }
 
   /**
-   * Busca processos por CPF
+   * Busca processos por CPF usando a API real do Escavador
    * @param cpf - CPF do lead (apenas números)
    * @returns Dados dos processos encontrados ou null
    */
@@ -32,17 +71,35 @@ export class EscavadorService {
     try {
       console.log(`[Escavador] Consultando processos para CPF: ${cpf}`)
 
-      // TODO: Implementar chamada real para a API do Escavador
-      // Por enquanto, vamos simular uma resposta
-      const response = await this.mockEscavadorAPICall(cpf)
+      // Fazer chamada real para a API do Escavador
+      const url = new URL(`${this.apiUrl}/envolvido/processos`)
+      url.searchParams.append('cpf_cnpj', cpf)
 
-      if (!response || response.processos.length === 0) {
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`[Escavador] Erro na API: ${response.status} - ${errorText}`)
+        return null
+      }
+
+      const data: EscavadorResponse = await response.json()
+      console.log(`[Escavador] Resposta recebida:`, JSON.stringify(data, null, 2))
+
+      if (!data.items || data.items.length === 0) {
         console.log(`[Escavador] Nenhum processo encontrado para CPF: ${cpf}`)
         return null
       }
 
       // Processar e filtrar apenas processos relevantes (precatórios)
-      const processosRelevantes = await this.processarResultados(response.processos)
+      const processosRelevantes = await this.processarResultados(data.items)
 
       if (processosRelevantes.length === 0) {
         console.log(`[Escavador] Nenhum precatório relevante encontrado para CPF: ${cpf}`)
@@ -57,7 +114,10 @@ export class EscavadorService {
         ultimaConsulta: new Date(),
         processos: processosRelevantes,
         totalValue,
-        hasEligibleProcessos: totalValue >= 10000
+        hasEligibleProcessos: totalValue >= 10000,
+        // Dados do envolvido encontrado
+        envolvidoNome: data.envolvido_encontrado?.nome,
+        quantidadeTotalProcessos: data.envolvido_encontrado?.quantidade_processos
       }
 
       console.log(`[Escavador] Encontrados ${processosRelevantes.length} processos relevantes, valor total: R$ ${totalValue}`)
@@ -78,15 +138,27 @@ export class EscavadorService {
 
     for (const processo of processos) {
       if (this.isPrecatorioRelevante(processo)) {
+        // Extrair valor da causa se disponível
+        const valorCausa = processo.fontes[0]?.capa?.valor_causa?.valor
+        const valor = valorCausa ? parseFloat(valorCausa) : 0
+
         const processoData = {
           numeroProcesso: processo.numero_cnj,
           tribunal: processo.fontes[0]?.nome || 'Não informado',
-          valor: processo.valor || 0,
-          status: 'ativo', // TODO: Mapear status real
+          tribunalSigla: processo.fontes[0]?.sigla || '',
+          valor: valor,
+          valorFormatado: processo.fontes[0]?.capa?.valor_causa?.valor_formatado || '',
+          status: 'ativo', // TODO: Mapear status baseado em outras informações
           dataInicio: processo.data_inicio ? new Date(processo.data_inicio) : undefined,
           ultimaMovimentacao: processo.data_ultima_movimentacao ? new Date(processo.data_ultima_movimentacao) : undefined,
           tipo: this.detectarTipoProcesso(processo),
-          assunto: processo.assunto || 'Não informado',
+          classe: processo.fontes[0]?.capa?.classe || '',
+          assunto: processo.fontes[0]?.capa?.assunto || 'Não informado',
+          assuntosNormalizados: processo.fontes[0]?.capa?.assuntos_normalizados?.map(a => a.nome) || [],
+          estado: processo.estado_origem?.sigla || '',
+          estadoNome: processo.estado_origem?.nome || '',
+          grau: processo.fontes[0]?.grau || 1,
+          quantidadeMovimentacoes: processo.quantidade_movimentacoes || 0,
           partes: {
             ativo: processo.titulo_polo_ativo || '',
             passivo: processo.titulo_polo_passivo || ''
@@ -105,7 +177,15 @@ export class EscavadorService {
    */
   private isPrecatorioRelevante(processo: ProcessoEscavador): boolean {
     const tribunal = processo.fontes[0]?.nome?.toLowerCase() || ''
-    const assunto = processo.assunto?.toLowerCase() || ''
+    const tribunalSigla = processo.fontes[0]?.sigla?.toLowerCase() || ''
+    const assunto = processo.fontes[0]?.capa?.assunto?.toLowerCase() || ''
+    const classe = processo.fontes[0]?.capa?.classe?.toLowerCase() || ''
+
+    // Verificar assuntos normalizados
+    const assuntosNormalizados = processo.fontes[0]?.capa?.assuntos_normalizados || []
+    const assuntoNormalizado = assuntosNormalizados
+      .map(a => a.path_completo?.toLowerCase() || '')
+      .join(' ')
 
     // Verificar se é de um tribunal relevante
     const tribunalRelevante =
@@ -113,18 +193,46 @@ export class EscavadorService {
       tribunal.includes('estadual') ||
       tribunal.includes('municipal') ||
       tribunal.includes('trabalhista') ||
-      tribunal.includes('trf') ||
-      tribunal.includes('tjsp') ||
-      tribunal.includes('trt')
+      tribunalSigla.includes('trf') ||
+      tribunalSigla.includes('tj') ||
+      tribunalSigla.includes('trt') ||
+      tribunalSigla.includes('jf') // Justiça Federal
 
-    // Verificar se o assunto indica precatório
+    // Verificar se o assunto indica precatório ou processo contra poder público
     const assuntoRelevante =
       assunto.includes('precatório') ||
       assunto.includes('requisição') ||
       assunto.includes('rpv') ||
-      assunto.includes('execução')
+      assunto.includes('execução') ||
+      assunto.includes('fazenda') ||
+      assunto.includes('estado') ||
+      assunto.includes('município') ||
+      assunto.includes('união') ||
+      assunto.includes('inss') ||
+      assunto.includes('servidor') ||
+      assuntoNormalizado.includes('execução') ||
+      assuntoNormalizado.includes('fazenda') ||
+      assuntoNormalizado.includes('previdenciário')
 
-    return tribunalRelevante || assuntoRelevante
+    // Verificar classe processual
+    const classeRelevante =
+      classe.includes('execução') ||
+      classe.includes('cumprimento') ||
+      classe.includes('monitória') ||
+      classe.includes('ordinária') ||
+      classe.includes('sumária')
+
+    // Verificar se é contra ente público nas partes
+    const poloPassivo = processo.titulo_polo_passivo?.toLowerCase() || ''
+    const contraEntePubico =
+      poloPassivo.includes('estado') ||
+      poloPassivo.includes('município') ||
+      poloPassivo.includes('união') ||
+      poloPassivo.includes('fazenda') ||
+      poloPassivo.includes('inss') ||
+      poloPassivo.includes('prefeitura')
+
+    return (tribunalRelevante && (assuntoRelevante || classeRelevante || contraEntePubico))
   }
 
   /**
@@ -132,65 +240,19 @@ export class EscavadorService {
    */
   private detectarTipoProcesso(processo: ProcessoEscavador): string {
     const tribunal = processo.fontes[0]?.nome?.toLowerCase() || ''
+    const tribunalSigla = processo.fontes[0]?.sigla?.toLowerCase() || ''
 
-    if (tribunal.includes('federal') || tribunal.includes('trf')) {
+    if (tribunal.includes('federal') || tribunalSigla.includes('trf') || tribunalSigla.includes('jf')) {
       return 'federal'
-    } else if (tribunal.includes('estadual') || tribunal.includes('tj')) {
+    } else if (tribunal.includes('estadual') || tribunalSigla.startsWith('tj')) {
       return 'estadual'
     } else if (tribunal.includes('municipal')) {
       return 'municipal'
-    } else if (tribunal.includes('trabalhista') || tribunal.includes('trt')) {
+    } else if (tribunal.includes('trabalhista') || tribunalSigla.includes('trt')) {
       return 'trabalhista'
     }
 
     return 'outros'
-  }
-
-  /**
-   * Mock da chamada à API do Escavador
-   * TODO: Substituir pela implementação real usando o SDK do Escavador
-   */
-  private async mockEscavadorAPICall(cpf: string): Promise<any> {
-    // Simular delay de API
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Para testes, vamos retornar dados mockados baseados no CPF
-    if (cpf === '12345678901') {
-      return {
-        envolvido: {
-          nome: 'João da Silva',
-          cpf: '12345678901'
-        },
-        processos: [
-          {
-            numero_cnj: '0000123-45.2020.8.26.0100',
-            fontes: [{ nome: 'TJSP - Tribunal de Justiça de São Paulo' }],
-            data_inicio: '2020-01-15',
-            data_ultima_movimentacao: '2024-10-20',
-            titulo_polo_ativo: 'João da Silva',
-            titulo_polo_passivo: 'Estado de São Paulo',
-            assunto: 'Precatório Alimentar',
-            valor: 85000
-          },
-          {
-            numero_cnj: '0000456-78.2019.5.02.0001',
-            fontes: [{ nome: 'TRT2 - Tribunal Regional do Trabalho' }],
-            data_inicio: '2019-06-10',
-            data_ultima_movimentacao: '2024-09-15',
-            titulo_polo_ativo: 'João da Silva',
-            titulo_polo_passivo: 'Empresa ABC Ltda',
-            assunto: 'Execução Trabalhista',
-            valor: 45000
-          }
-        ]
-      }
-    }
-
-    // CPF não encontrado
-    return {
-      envolvido: null,
-      processos: []
-    }
   }
 
   /**
@@ -200,9 +262,8 @@ export class EscavadorService {
     const apiKey = process.env.ESCAVADOR_API_KEY
 
     if (!apiKey) {
-      console.warn('[Escavador] API Key não configurada. Usando modo mock.')
-      // Retornar instância mock para desenvolvimento
-      return new EscavadorService('mock-api-key')
+      console.warn('[Escavador] API Key não configurada. Serviço desabilitado.')
+      return null
     }
 
     return new EscavadorService(apiKey)

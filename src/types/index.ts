@@ -162,6 +162,12 @@ export interface BotConfig {
       imageModel?: string
     }
   }
+  escavadorConfig?: {
+    enabled?: boolean
+    apiKey?: string
+    cacheHours?: number
+    maxProcessos?: number
+  }
   updatedAt?: Date
   updatedBy?: string
 }
