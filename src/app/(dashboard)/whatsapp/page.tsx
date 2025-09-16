@@ -218,9 +218,12 @@ export default function WhatsAppConnectionPage() {
       }
 
       if (response.ok) {
+        const instanceData = data.instance || data
+        const connectionState = instanceData.state || instanceData.connectionStatus || 'close'
+
         setConnectionStatus(prev => ({
           ...prev,
-          [instanceName]: data.state || data.status || 'close'
+          [instanceName]: connectionState
         }))
 
         // Update instances with new data
@@ -228,11 +231,11 @@ export default function WhatsAppConnectionPage() {
           if (inst.instanceName === instanceName) {
             return {
               ...inst,
-              state: data.state || data.status || 'close',
-              phoneNumber: data.phoneNumber || inst.phoneNumber,
-              profileName: data.profileName || inst.profileName,
-              profilePicUrl: data.profilePicUrl || inst.profilePicUrl,
-              ownerJid: data.ownerJid || inst.ownerJid
+              state: connectionState,
+              phoneNumber: instanceData.phoneNumber || data.phoneNumber || inst.phoneNumber,
+              profileName: instanceData.profileName || inst.profileName,
+              profilePicUrl: instanceData.profilePicUrl || inst.profilePicUrl,
+              ownerJid: instanceData.ownerJid || inst.ownerJid
             }
           }
           return inst
@@ -272,16 +275,15 @@ export default function WhatsAppConnectionPage() {
     fetchInstances()
   }, [fetchInstances])
 
-  // Auto-refresh status every 5 seconds
+  // Auto-refresh status every 10 seconds
   useEffect(() => {
     if (instances.length > 0) {
       intervalRef.current = setInterval(() => {
         instances.forEach(instance => {
-          if (instance.state !== 'open') {
-            checkConnectionStatus(instance.instanceName)
-          }
+          // Check all instances periodically to keep status updated
+          checkConnectionStatus(instance.instanceName)
         })
-      }, 5000)
+      }, 10000) // Increased to 10 seconds to reduce API calls
     }
 
     return () => {
