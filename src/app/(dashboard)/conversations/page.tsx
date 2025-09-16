@@ -4,10 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { 
-  MessageSquare, 
-  User, 
-  Clock, 
+import {
+  MessageSquare,
+  User,
+  Clock,
   Send,
   Phone,
   MoreVertical,
@@ -22,7 +22,8 @@ import {
   Eye,
   EyeOff,
   FileText,
-  Loader2
+  Loader2,
+  ArrowLeft
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -129,7 +130,7 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser, transcription, conversat
     const clickX = e.clientX - rect.left
     const percentage = clickX / rect.width
     const newTime = percentage * duration
-    
+
     audio.currentTime = newTime
     setCurrentTime(newTime)
   }
@@ -182,7 +183,7 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser, transcription, conversat
   }
 
   return (
-    <div className={`flex items-center space-x-3 p-3 rounded-lg w-full max-w-[300px] sm:max-w-[280px] ${
+    <div className={`flex items-center space-x-3 p-3 rounded-lg w-full max-w-full sm:max-w-[280px] ${
       isFromUser ? 'bg-white shadow-sm border border-gray-100' : 'bg-gray-100'
     }`}>
       <audio ref={audioRef} preload="metadata" crossOrigin="anonymous">
@@ -193,15 +194,15 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser, transcription, conversat
         <source src={audioUrl} type="audio/webm" />
         Seu navegador não suporta áudio.
       </audio>
-      
+
       <button
         onClick={togglePlayPause}
         disabled={isLoading}
         className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-          isLoading 
-            ? 'bg-gray-300 cursor-not-allowed' 
-            : isFromUser 
-            ? 'bg-green-500 hover:bg-green-600 text-white' 
+          isLoading
+            ? 'bg-gray-300 cursor-not-allowed'
+            : isFromUser
+            ? 'bg-green-500 hover:bg-green-600 text-white'
             : 'bg-green-500 hover:bg-green-600 text-white'
         }`}
       >
@@ -253,20 +254,20 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser, transcription, conversat
             </span>
           </div>
         </div>
-        
-        <div 
+
+        <div
           className="w-full h-2 bg-gray-200 rounded-full overflow-hidden cursor-pointer hover:h-2.5 transition-all duration-200"
           onClick={handleProgressClick}
           title={`Clique para pular para ${formatTime((duration || 0) * (0.5))}`}
         >
-          <div 
+          <div
             className={`h-full transition-all duration-200 ${
               isFromUser ? 'bg-green-500' : 'bg-green-500'
             }`}
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
-        
+
         {showTranscription && currentTranscription && (
           <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-700 border-l-2 border-blue-400">
             <div className="font-medium text-blue-600 mb-1">Transcrição:</div>
@@ -280,7 +281,7 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser, transcription, conversat
             <div>{transcriptionError}</div>
           </div>
         )}
-        
+
         {mimetype && (
           <p className="text-xs text-gray-400 mt-1 truncate">
             {mimetype.replace('audio/', '').toUpperCase()}
@@ -350,6 +351,8 @@ export default function ConversationsPage() {
   const [instanceInfo, setInstanceInfo] = useState<InstanceInfo | null>(null)
   const [instanceError, setInstanceError] = useState<string | null>(null)
   const [deletingConversation, setDeletingConversation] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  const [showConversationList, setShowConversationList] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Stable callback functions
@@ -371,15 +374,15 @@ export default function ConversationsPage() {
         // 1. It's a user message (not bot/agent)
         // 2. The conversation is not currently selected
         const shouldIncrementUnread = data.isUserMessage && selectedConversation !== data.conversationId
-        
+
         return {
           ...conv,
           lastMessage: data.lastMessage || conv.lastMessage,
           lastMessageTime: data.lastMessageTime ? new Date(data.lastMessageTime) : conv.lastMessageTime,
-          unreadCount: selectedConversation === data.conversationId 
+          unreadCount: selectedConversation === data.conversationId
             ? 0 // Reset to 0 if conversation is selected
-            : shouldIncrementUnread 
-            ? conv.unreadCount + 1 
+            : shouldIncrementUnread
+            ? conv.unreadCount + 1
             : conv.unreadCount // Keep existing count for bot/agent messages
         }
       }
@@ -390,7 +393,7 @@ export default function ConversationsPage() {
   const handleConversationDeleted = useCallback((data: { conversationId: string }) => {
     // Remove conversation from list
     setConversations(prev => prev.filter(conv => conv._id !== data.conversationId))
-    
+
     // Clear selection if it was the deleted conversation
     if (selectedConversation === data.conversationId) {
       setSelectedConversation(null)
@@ -422,12 +425,23 @@ export default function ConversationsPage() {
           console.error('Error refreshing conversations after reconnection:', error)
         }
       }
-      
+
       // Add a small delay to ensure WebSocket is fully ready
       const timeoutId = setTimeout(refreshConversations, 1000)
       return () => clearTimeout(timeoutId)
     }
   }, [isConnected, conversations.length])
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1280) // xl breakpoint
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     async function fetchConversations() {
@@ -458,24 +472,6 @@ export default function ConversationsPage() {
       scrollToBottom()
     }
   }, [conversationDetails?.messages])
-
-  // Refresh unread count from database for a specific conversation
-  const refreshUnreadCount = async (conversationId: string) => {
-    try {
-      const response = await fetch(`/api/conversations/${conversationId}/unread-count`)
-      if (response.ok) {
-        const { unreadCount } = await response.json()
-        
-        setConversations(prev => prev.map(conv => 
-          conv._id === conversationId 
-            ? { ...conv, unreadCount }
-            : conv
-        ))
-      }
-    } catch (error) {
-      console.error('Error refreshing unread count:', error)
-    }
-  }
 
   // Buscar informações da instância para uma conversa
   const fetchInstanceInfo = async (conversationId: string) => {
@@ -508,18 +504,18 @@ export default function ConversationsPage() {
       if (response.ok) {
         const data = await response.json()
         setConversationDetails(data.conversation)
-        
+
         // Buscar informações da instância
         await fetchInstanceInfo(conversationId)
-        
+
         // Marcar mensagens como lidas
         await fetch(`/api/conversations/${conversationId}/read`, {
           method: 'POST'
         })
-        
+
         // Atualizar contador de não lidas na lista
-        setConversations(prev => prev.map(conv => 
-          conv._id === conversationId 
+        setConversations(prev => prev.map(conv =>
+          conv._id === conversationId
             ? { ...conv, unreadCount: 0 }
             : conv
         ))
@@ -548,23 +544,23 @@ export default function ConversationsPage() {
   // Enviar nova mensagem
   const sendMessage = async () => {
     if ((!newMessage.trim() && !selectedFile) || !selectedConversation || sendingMessage) return
-    
+
     // Verificar se temos informações da instância
     if (!instanceInfo) {
       setInstanceError('Nenhuma instância ativa encontrada para esta conversa')
       return
     }
-    
+
     try {
       setSendingMessage(true)
-      
+
       // Se há arquivo, enviar como FormData
       if (selectedFile) {
         const formData = new FormData()
         formData.append('file', selectedFile)
         formData.append('message', newMessage || '')
         formData.append('instanceName', instanceInfo.instanceName)
-        
+
         const response = await fetch(`/api/conversations/${selectedConversation}/send-media`, {
           method: 'POST',
           body: formData
@@ -572,10 +568,10 @@ export default function ConversationsPage() {
 
         if (response.ok) {
           // Não adicionar mensagem aqui - WebSocket já vai fazer isso via handleNewMessage
-          
+
           setNewMessage('')
           setSelectedFile(null)
-          
+
           // Atualizar lista de conversas
           const conversationsResponse = await fetch('/api/conversations')
           if (conversationsResponse.ok) {
@@ -596,7 +592,7 @@ export default function ConversationsPage() {
 
         if (response.ok) {
           const data = await response.json()
-          
+
           // Adicionar nova mensagem à lista
           if (conversationDetails) {
             setConversationDetails(prev => prev ? {
@@ -604,9 +600,9 @@ export default function ConversationsPage() {
               messages: [...prev.messages, data.message]
             } : null)
           }
-          
+
           setNewMessage('')
-          
+
           // Atualizar lista de conversas
           const conversationsResponse2 = await fetch('/api/conversations')
           if (conversationsResponse2.ok) {
@@ -628,12 +624,29 @@ export default function ConversationsPage() {
     if (selectedConversation) {
       leaveConversation(selectedConversation)
     }
-    
+
     setSelectedConversation(conversationId)
     fetchConversationMessages(conversationId)
-    
+
     // Join new conversation room for real-time updates
     joinConversation(conversationId)
+
+    // Em mobile, esconder lista de conversas quando selecionar uma
+    if (isMobile) {
+      setShowConversationList(false)
+    }
+  }
+
+  // Voltar para lista de conversas (mobile)
+  const handleBackToConversations = () => {
+    if (selectedConversation) {
+      leaveConversation(selectedConversation)
+    }
+    setSelectedConversation(null)
+    setConversationDetails(null)
+    setInstanceInfo(null)
+    setInstanceError(null)
+    setShowConversationList(true)
   }
 
   // Função para excluir conversa
@@ -641,20 +654,20 @@ export default function ConversationsPage() {
     const confirmed = window.confirm(
       `Tem certeza que deseja excluir a conversa com ${leadName}?\n\nEsta ação não pode ser desfeita e todas as mensagens serão perdidas.`
     )
-    
+
     if (!confirmed) return
-    
+
     try {
       setDeletingConversation(conversationId)
-      
+
       const response = await fetch(`/api/conversations/${conversationId}/delete`, {
         method: 'DELETE'
       })
-      
+
       if (response.ok) {
         // Remover da lista de conversas
         setConversations(prev => prev.filter(conv => conv._id !== conversationId))
-        
+
         // Se era a conversa selecionada, limpar seleção
         if (selectedConversation === conversationId) {
           setSelectedConversation(null)
@@ -662,7 +675,7 @@ export default function ConversationsPage() {
           setInstanceInfo(null)
           setInstanceError(null)
         }
-        
+
         // Opcional: mostrar toast de sucesso
         console.log('Conversa excluída com sucesso')
       } else {
@@ -684,7 +697,7 @@ export default function ConversationsPage() {
       completed: { variant: 'outline', label: 'Finalizada' },
       transferred: { variant: 'destructive', label: 'Transferida' }
     }
-    
+
     const config = variants[status] || variants.active
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
@@ -696,7 +709,7 @@ export default function ConversationsPage() {
       cold: { variant: 'cold', label: 'Frio' },
       discard: { variant: 'outline', label: 'Descarte' }
     }
-    
+
     const config = variants[classification] || variants.cold
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
@@ -711,263 +724,207 @@ export default function ConversationsPage() {
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
-      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 sm:mb-6">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 flex items-center space-x-2">
-            <span>Conversas</span>
-            {isConnected ? (
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Conectado em tempo real" />
-            ) : (
-              <div className="w-2 h-2 bg-red-500 rounded-full" title="Desconectado do tempo real" />
-            )}
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600">Gerencie todas as conversas do WhatsApp</p>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline">
-            <Phone className="w-4 h-4 mr-2" />
-            Ligar
+      {/* Header Mobile com botão voltar */}
+      {isMobile && !showConversationList ? (
+        <div className="flex-shrink-0 flex items-center gap-3 mb-4 p-2 bg-white border-b">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBackToConversations}
+            className="p-2"
+          >
+            <ArrowLeft className="w-5 h-5" />
           </Button>
-          <Button>
-            <MessageSquare className="w-4 h-4 mr-2" />
-            Nova Conversa
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex-1 grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 overflow-hidden">
-        <Card className="xl:col-span-1 flex flex-col overflow-hidden">
-          <CardHeader className="flex-shrink-0">
-            <CardTitle className="flex items-center justify-between">
-              <span>Conversas ({conversations.length})</span>
-              <Button variant="ghost" size="icon">
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-hidden">
-            {conversations.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center py-12">
-                  <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma conversa</h3>
-                  <p className="text-gray-600">
-                    Configure a Evolution API para começar a receber conversas do WhatsApp.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="h-full overflow-y-auto">
-                {conversations.map((conversation) => (
-                <div
-                  key={conversation._id}
-                  className={`relative group p-4 border-b transition-colors ${
-                    selectedConversation === conversation._id ? 'bg-blue-50 border-l-4 border-l-primary' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  {/* Botão de excluir (visível no hover) */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeleteConversation(conversation._id, conversation.leadName)
-                    }}
-                    disabled={deletingConversation === conversation._id}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full p-1 text-xs disabled:opacity-50"
-                    title={`Excluir conversa com ${conversation.leadName}`}
-                  >
-                    {deletingConversation === conversation._id ? (
-                      <RefreshCw className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-3 h-3" />
-                    )}
-                  </button>
-                  
-                  {/* Conteúdo da conversa (clicável para selecionar) */}
-                  <div 
-                    className="cursor-pointer"
-                    onClick={() => handleConversationSelect(conversation._id)}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                          {conversation.leadName.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-gray-900">{conversation.leadName}</h4>
-                          <p className="text-xs text-gray-500">{conversation.leadPhone}</p>
-                        </div>
-                      </div>
-                      {conversation.unreadCount > 0 && (
-                        <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                          {conversation.unreadCount}
-                        </span>
-                      )}
-                    </div>
-                  
-                    <div className="flex items-center space-x-2 mb-2">
-                      {getStatusBadge(conversation.status)}
-                      {getClassificationBadge(conversation.classification)}
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                      {conversation.lastMessage}
-                    </p>
-                    
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{formatDate(new Date(conversation.lastMessageTime))}</span>
-                      </div>
-                      {conversation.assignedAgent && (
-                        <div className="flex items-center space-x-1">
-                          <User className="w-3 h-3" />
-                          <span>{conversation.assignedAgent}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                ))}
-              </div>
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+              <span>{conversationDetails?.leadId?.name || 'Carregando...'}</span>
+              {isConnected ? (
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Conectado em tempo real" />
+              ) : (
+                <div className="w-2 h-2 bg-red-500 rounded-full" title="Desconectado do tempo real" />
+              )}
+            </h1>
+            {instanceInfo?.phoneNumber && (
+              <p className="text-sm text-gray-600">
+                {instanceInfo.phoneNumber.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '+$1 ($2) $3-$4')}
+              </p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      ) : (
+        /* Header Desktop/Mobile Lista */
+        <div className="flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 sm:mb-6">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 flex items-center space-x-2">
+              <span>Conversas</span>
+              {isConnected ? (
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Conectado em tempo real" />
+              ) : (
+                <div className="w-2 h-2 bg-red-500 rounded-full" title="Desconectado do tempo real" />
+              )}
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600">Gerencie todas as conversas do WhatsApp</p>
+          </div>
+          <div className="flex space-x-2">
+            <Button variant="outline" className="hidden sm:flex">
+              <Phone className="w-4 h-4 mr-2" />
+              Ligar
+            </Button>
+            <Button className="hidden sm:flex">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Nova Conversa
+            </Button>
+          </div>
+        </div>
+      )}
 
-        <Card className="xl:col-span-2 flex flex-col overflow-hidden">
-          <CardHeader className="flex-shrink-0">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex flex-col">
-                {selectedConversation ? (
-                  <div>
-                    <span className="text-lg font-semibold">
-                      Conversa com {conversationDetails?.leadId?.name || 'Carregando...'}
-                    </span>
-                    
-                    {/* Informações da instância */}
-                    <div className="flex items-center space-x-2 mt-1">
-                      {instanceInfo ? (
-                        <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          {instanceInfo.profilePicUrl ? (
-                            <img 
-                              src={instanceInfo.profilePicUrl} 
-                              alt="WhatsApp" 
-                              className="w-4 h-4 rounded-full"
-                            />
-                          ) : (
-                            <Smartphone className="w-4 h-4" />
-                          )}
-                          <span>
-                            {instanceInfo.profileName || instanceInfo.instanceName}
-                            {instanceInfo.phoneNumber && (
-                              <span className="text-gray-500 ml-1">
-                                ({instanceInfo.phoneNumber.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '+$1 ($2) $3-$4')})
-                              </span>
-                            )}
-                          </span>
-                          {instanceInfo.isMatched ? (
-                            <CheckCircle className="w-3 h-3 text-green-500" />
-                          ) : (
-                            <AlertTriangle className="w-3 h-3 text-yellow-500" />
-                          )}
-                        </div>
-                      ) : instanceError ? (
-                        <div className="flex items-center space-x-1 text-sm text-red-600">
-                          <AlertTriangle className="w-4 h-4" />
-                          <span>{instanceError}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-1 text-sm text-gray-500">
-                          <RefreshCw className="w-3 h-3 animate-spin" />
-                          <span>Carregando instância...</span>
-                        </div>
-                      )}
+      {/* Layout responsivo principal */}
+      {isMobile ? (
+        /* Layout Mobile: Lista OU Chat */
+        <div className="flex-1 overflow-hidden">
+          {showConversationList ? (
+            /* Lista de Conversas Mobile */
+            <Card className="flex flex-col h-full overflow-hidden">
+              <CardHeader className="flex-shrink-0 pb-3">
+                <CardTitle className="flex items-center justify-between text-lg">
+                  <span>Conversas ({conversations.length})</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 flex-1 overflow-hidden">
+                {conversations.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center py-12">
+                      <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma conversa</h3>
+                      <p className="text-gray-600 px-4">
+                        Configure a Evolution API para começar a receber conversas do WhatsApp.
+                      </p>
                     </div>
                   </div>
                 ) : (
-                  <span>Selecione uma conversa</span>
-                )}
-              </div>
-              
-              {selectedConversation && (
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
-                    Transferir
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    Pausar Bot
-                  </Button>
-                </div>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col overflow-hidden">
-            {selectedConversation ? (
-              <div className="flex flex-col h-full">
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-lg mb-4">
-                  {messagesLoading ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-sm text-gray-500">Carregando mensagens...</div>
-                    </div>
-                  ) : conversationDetails?.messages?.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                        <p className="text-sm text-gray-500">Nenhuma mensagem ainda</p>
-                      </div>
-                    </div>
-                  ) : (
-                    conversationDetails?.messages?.map((message, index) => (
-                      <div key={message._id || index} className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'}`}>
-                        <div className={`max-w-xs p-3 rounded-lg ${
-                          message.sender === 'user' 
-                            ? 'bg-white shadow-sm' 
-                            : message.sender === 'bot'
-                            ? 'bg-blue-100 text-blue-900'
-                            : 'bg-primary text-white'
-                        }`}>
-                          {/* Renderizar conteúdo baseado no tipo de mensagem */}
-                          {message.type === 'image' && message.metadata?.mediaUrl ? (
-                            <div className="space-y-2">
-                              <img 
-                                src={message.metadata.mediaUrl} 
-                                alt="Imagem enviada" 
-                                className="rounded-lg max-w-full h-auto cursor-pointer"
-                                onClick={() => message.metadata?.mediaUrl && window.open(message.metadata.mediaUrl, '_blank')}
-                              />
-                              {message.content !== '[Imagem enviada]' && (
-                                <p className="text-sm">{message.content}</p>
-                              )}
-                            </div>
-                          ) : message.type === 'document' ? (
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded">
-                                <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center">
-                                  <span className="text-white text-xs font-bold">
-                                    {message.metadata?.fileName?.split('.').pop()?.toUpperCase() || 'DOC'}
-                                  </span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-gray-900 truncate">
-                                    {message.metadata?.fileName || 'Documento'}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    Documento PDF
-                                  </p>
-                                </div>
-                                {message.metadata && message.metadata.mediaUrl && (
-                                  <button
-                                    onClick={() => message.metadata?.mediaUrl && window.open(message.metadata.mediaUrl, '_blank')}
-                                    className="text-blue-500 hover:text-blue-700 text-xs"
-                                  >
-                                    Abrir
-                                  </button>
-                                )}
+                  <div className="h-full overflow-y-auto">
+                    {conversations.map((conversation) => (
+                      <div
+                        key={conversation._id}
+                        className={`relative group p-4 border-b transition-colors active:bg-blue-50 ${
+                          selectedConversation === conversation._id ? 'bg-blue-50 border-l-4 border-l-primary' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        {/* Botão de excluir (mobile touch) */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteConversation(conversation._id, conversation.leadName)
+                          }}
+                          disabled={deletingConversation === conversation._id}
+                          className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-full p-2 text-xs disabled:opacity-50 touch-manipulation"
+                          title={`Excluir conversa com ${conversation.leadName}`}
+                        >
+                          {deletingConversation === conversation._id ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+
+                        {/* Conteúdo da conversa (clicável para selecionar) */}
+                        <div
+                          className="cursor-pointer pr-12 touch-manipulation"
+                          onClick={() => handleConversationSelect(conversation._id)}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium shrink-0">
+                                {conversation.leadName.split(' ').map(n => n[0]).join('')}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h4 className="font-semibold text-gray-900 text-base truncate">{conversation.leadName}</h4>
+                                <p className="text-sm text-gray-500">{conversation.leadPhone}</p>
                               </div>
                             </div>
-                          ) : message.type === 'audio' ? (
-                            <div className="space-y-2">
-                              {message.metadata?.mediaUrl ? (
-                                <AudioMessage 
+                            {conversation.unreadCount > 0 && (
+                              <span className="bg-red-500 text-white text-xs rounded-full px-2.5 py-1 min-w-[24px] text-center font-medium">
+                                {conversation.unreadCount}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center space-x-2 mb-3">
+                            {getStatusBadge(conversation.status)}
+                            {getClassificationBadge(conversation.classification)}
+                          </div>
+
+                          <p className="text-sm text-gray-600 line-clamp-2 mb-3 leading-5">
+                            {conversation.lastMessage}
+                          </p>
+
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <div className="flex items-center space-x-1">
+                              <Clock className="w-3 h-3" />
+                              <span>{formatDate(new Date(conversation.lastMessageTime))}</span>
+                            </div>
+                            {conversation.assignedAgent && (
+                              <div className="flex items-center space-x-1">
+                                <User className="w-3 h-3" />
+                                <span className="truncate max-w-20">{conversation.assignedAgent}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            /* Chat View Mobile */
+            <Card className="flex flex-col h-full overflow-hidden">
+              <CardContent className="flex-1 flex flex-col overflow-hidden p-0">
+                {selectedConversation ? (
+                  <div className="flex flex-col h-full">
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
+                      {messagesLoading ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-sm text-gray-500">Carregando mensagens...</div>
+                        </div>
+                      ) : conversationDetails?.messages?.length === 0 ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                            <p className="text-sm text-gray-500">Nenhuma mensagem ainda</p>
+                          </div>
+                        </div>
+                      ) : (
+                        conversationDetails?.messages?.map((message, index) => (
+                          <div key={message._id || index} className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'}`}>
+                            <div className={`max-w-[85%] p-3 rounded-lg ${
+                              message.sender === 'user'
+                                ? 'bg-white shadow-sm'
+                                : message.sender === 'bot'
+                                ? 'bg-blue-100 text-blue-900'
+                                : 'bg-primary text-white'
+                            }`}>
+                              {/* Renderizar conteúdo da mensagem (resumido para mobile) */}
+                              {message.type === 'text' ? (
+                                <p className="text-sm leading-5">{message.content}</p>
+                              ) : message.type === 'image' && message.metadata?.mediaUrl ? (
+                                <div className="space-y-2">
+                                  <img
+                                    src={message.metadata.mediaUrl}
+                                    alt="Imagem"
+                                    className="rounded-lg max-w-full h-auto cursor-pointer"
+                                    onClick={() => window.open(message.metadata?.mediaUrl, '_blank')}
+                                  />
+                                  {message.content !== '[Imagem enviada]' && (
+                                    <p className="text-sm">{message.content}</p>
+                                  )}
+                                </div>
+                              ) : message.type === 'audio' && message.metadata?.mediaUrl ? (
+                                <AudioMessage
                                   audioUrl={message.metadata.mediaUrl}
                                   mimetype={message.metadata?.mimetype}
                                   isFromUser={message.sender === 'user'}
@@ -975,11 +932,10 @@ export default function ConversationsPage() {
                                   conversationId={selectedConversation}
                                   messageId={message._id}
                                   onTranscriptionUpdate={(transcription) => {
-                                    // Atualizar o estado local da mensagem
                                     setConversationDetails(prev => {
                                       if (!prev) return prev
-                                      const updatedMessages = prev.messages.map(msg => 
-                                        msg._id === message._id 
+                                      const updatedMessages = prev.messages.map(msg =>
+                                        msg._id === message._id
                                           ? { ...msg, metadata: { ...msg.metadata, transcription } }
                                           : msg
                                       )
@@ -988,181 +944,567 @@ export default function ConversationsPage() {
                                   }}
                                 />
                               ) : (
-                                <div className="flex items-center space-x-3 p-3 bg-gray-100 rounded-lg max-w-[280px]">
-                                  <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center">
-                                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
-                                    </svg>
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-700">Mensagem de áudio</p>
-                                    <p className="text-xs text-gray-500">Áudio não disponível para reprodução</p>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ) : message.type === 'video' ? (
-                            <div className="space-y-2">
-                              {message.metadata?.mediaUrl ? (
-                                <video 
-                                  controls 
-                                  className="rounded-lg max-w-full h-auto"
-                                  style={{ maxHeight: '200px' }}
-                                >
-                                  <source src={message.metadata.mediaUrl} type="video/mp4" />
-                                  Seu navegador não suporta vídeo.
-                                </video>
-                              ) : (
-                                <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded">
-                                  <div className="w-8 h-8 bg-purple-500 rounded flex items-center justify-center">
-                                    <span className="text-white text-xs">📹</span>
-                                  </div>
-                                  <p className="text-sm">Vídeo enviado</p>
-                                </div>
-                              )}
-                              {message.content !== '[Vídeo enviado]' && (
                                 <p className="text-sm">{message.content}</p>
                               )}
+
+                              <div className="flex items-center justify-between mt-2">
+                                <p className={`text-xs ${
+                                  message.sender === 'user'
+                                    ? 'text-gray-500'
+                                    : message.sender === 'bot'
+                                    ? 'text-blue-600'
+                                    : 'opacity-80'
+                                }`}>
+                                  {message.timestamp ? new Date(message.timestamp).toLocaleTimeString('pt-BR', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  }) : 'Agora'}
+                                </p>
+                                {message.sender === 'user' && (
+                                  <span className={`text-xs ${message.read ? 'text-blue-500' : 'text-gray-400'}`}>
+                                    {message.read ? '✓✓' : '✓'}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          ) : (
-                            <p className="text-sm">{message.content}</p>
-                          )}
-                          <div className="flex items-center justify-between mt-1">
-                            <p className={`text-xs ${
-                              message.sender === 'user' 
-                                ? 'text-gray-500' 
-                                : message.sender === 'bot'
-                                ? 'text-blue-600'
-                                : 'opacity-80'
-                            }`}>
-                              {message.timestamp ? new Date(message.timestamp).toLocaleTimeString('pt-BR', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              }) : 'Agora'}
-                            </p>
-                            {message.sender === 'user' && (
-                              <span className={`text-xs ${message.read ? 'text-blue-500' : 'text-gray-400'}`}>
-                                {message.read ? '✓✓' : '✓'}
-                              </span>
-                            )}
                           </div>
-                          {message.senderName && message.sender !== 'user' && (
-                            <p className={`text-xs mt-1 ${
-                              message.sender === 'bot' ? 'text-blue-600' : 'opacity-70'
-                            }`}>
-                              {message.sender === 'bot' ? 'Bot' : message.senderName}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-                
-                <div className="flex-shrink-0 space-y-2">
-                  {/* Aviso de erro de instância */}
-                  {instanceError && !instanceInfo && (
-                    <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span className="text-sm">{instanceError}</span>
-                    </div>
-                  )}
-                  
-                  {/* Preview do arquivo selecionado */}
-                  {selectedFile && (
-                    <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded-lg">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{selectedFile.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={removeSelectedFile}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        ×
-                      </Button>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center space-x-2">
-                    {/* Botão de anexo */}
-                    <div className="relative">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowFileMenu(!showFileMenu)}
-                        className="p-2"
-                      >
-                        <Paperclip className="w-4 h-4" />
-                      </Button>
-                      
-                      {/* Menu de anexos */}
-                      {showFileMenu && (
-                        <div className="absolute bottom-full left-0 mb-2 bg-white border rounded-lg shadow-lg py-1 min-w-[120px]">
-                          <label className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-100 cursor-pointer">
-                            <Image className="w-4 h-4" />
-                            <span className="text-sm">Imagem</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleFileSelect}
-                              className="hidden"
-                            />
-                          </label>
-                          <label className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-100 cursor-pointer">
-                            <File className="w-4 h-4" />
-                            <span className="text-sm">Documento</span>
-                            <input
-                              type="file"
-                              accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
-                              onChange={handleFileSelect}
-                              className="hidden"
-                            />
-                          </label>
-                        </div>
+                        ))
                       )}
+                      <div ref={messagesEndRef} />
                     </div>
 
-                    <input
-                      type="text"
-                      placeholder="Digite sua mensagem..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                      disabled={sendingMessage}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
-                    />
-                    <Button 
-                      size="sm" 
-                      onClick={sendMessage}
-                      disabled={(!newMessage.trim() && !selectedFile) || sendingMessage || !instanceInfo}
-                      title={!instanceInfo ? 'Nenhuma instância ativa encontrada' : ''}
-                    >
-                      {sendingMessage ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
+                    {/* Input de mensagem mobile */}
+                    <div className="flex-shrink-0 p-3 bg-white border-t space-y-2">
+                      {/* Preview do arquivo selecionado */}
+                      {selectedFile && (
+                        <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded-lg">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{selectedFile.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={removeSelectedFile}
+                            className="text-red-500 hover:text-red-700 h-8 w-8 p-0"
+                          >
+                            ×
+                          </Button>
+                        </div>
                       )}
-                    </Button>
+
+                      {/* Input principal */}
+                      <div className="flex items-center space-x-2">
+                        {/* Botão de anexo */}
+                        <div className="relative">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowFileMenu(!showFileMenu)}
+                            className="p-3 h-12 w-12 touch-manipulation"
+                          >
+                            <Paperclip className="w-5 h-5" />
+                          </Button>
+
+                          {/* Menu de anexos mobile */}
+                          {showFileMenu && (
+                            <div className="absolute bottom-full left-0 mb-2 bg-white border rounded-lg shadow-lg py-1 min-w-[140px] z-10">
+                              <label className="flex items-center space-x-2 px-3 py-3 active:bg-gray-100 cursor-pointer touch-manipulation">
+                                <Image className="w-4 h-4" />
+                                <span className="text-sm">Imagem</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleFileSelect}
+                                  className="hidden"
+                                />
+                              </label>
+                              <label className="flex items-center space-x-2 px-3 py-3 active:bg-gray-100 cursor-pointer touch-manipulation">
+                                <File className="w-4 h-4" />
+                                <span className="text-sm">Documento</span>
+                                <input
+                                  type="file"
+                                  accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
+                                  onChange={handleFileSelect}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+
+                        <input
+                          type="text"
+                          placeholder="Digite sua mensagem..."
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                          disabled={sendingMessage}
+                          className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 touch-manipulation"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={sendMessage}
+                          disabled={(!newMessage.trim() && !selectedFile) || sendingMessage || !instanceInfo}
+                          className="h-12 w-12 p-0 touch-manipulation"
+                          title={!instanceInfo ? 'Nenhuma instância ativa encontrada' : ''}
+                        >
+                          {sendingMessage ? (
+                            <RefreshCw className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Send className="w-5 h-5" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    <div className="text-center">
+                      <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>Erro ao carregar conversa</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      ) : (
+        /* Layout Desktop - mantém o original */
+        <div className="flex-1 grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 overflow-hidden">
+          {/* Lista de conversas desktop */}
+          <Card className="xl:col-span-1 flex flex-col overflow-hidden">
+            <CardHeader className="flex-shrink-0">
+              <CardTitle className="flex items-center justify-between">
+                <span>Conversas ({conversations.length})</span>
+                <Button variant="ghost" size="icon">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 flex-1 overflow-hidden">
+              {conversations.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center py-12">
+                    <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma conversa</h3>
+                    <p className="text-gray-600">
+                      Configure a Evolution API para começar a receber conversas do WhatsApp.
+                    </p>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                <div className="text-center">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Selecione uma conversa para visualizar as mensagens</p>
+              ) : (
+                <div className="h-full overflow-y-auto">
+                  {conversations.map((conversation) => (
+                  <div
+                    key={conversation._id}
+                    className={`relative group p-4 border-b transition-colors ${
+                      selectedConversation === conversation._id ? 'bg-blue-50 border-l-4 border-l-primary' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    {/* Botão de excluir (visível no hover) */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteConversation(conversation._id, conversation.leadName)
+                      }}
+                      disabled={deletingConversation === conversation._id}
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full p-1 text-xs disabled:opacity-50"
+                      title={`Excluir conversa com ${conversation.leadName}`}
+                    >
+                      {deletingConversation === conversation._id ? (
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3 h-3" />
+                      )}
+                    </button>
+
+                    {/* Conteúdo da conversa (clicável para selecionar) */}
+                    <div
+                      className="cursor-pointer"
+                      onClick={() => handleConversationSelect(conversation._id)}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
+                            {conversation.leadName.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900">{conversation.leadName}</h4>
+                            <p className="text-xs text-gray-500">{conversation.leadPhone}</p>
+                          </div>
+                        </div>
+                        {conversation.unreadCount > 0 && (
+                          <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                            {conversation.unreadCount}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center space-x-2 mb-2">
+                        {getStatusBadge(conversation.status)}
+                        {getClassificationBadge(conversation.classification)}
+                      </div>
+
+                      <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                        {conversation.lastMessage}
+                      </p>
+
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <Clock className="w-3 h-3" />
+                          <span>{formatDate(new Date(conversation.lastMessageTime))}</span>
+                        </div>
+                        {conversation.assignedAgent && (
+                          <div className="flex items-center space-x-1">
+                            <User className="w-3 h-3" />
+                            <span>{conversation.assignedAgent}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  ))}
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Chat desktop - mantém o original completo */}
+          <Card className="xl:col-span-2 flex flex-col overflow-hidden">
+            <CardHeader className="flex-shrink-0">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  {selectedConversation ? (
+                    <div>
+                      <span className="text-lg font-semibold">
+                        Conversa com {conversationDetails?.leadId?.name || 'Carregando...'}
+                      </span>
+
+                      {/* Informações da instância */}
+                      <div className="flex items-center space-x-2 mt-1">
+                        {instanceInfo ? (
+                          <div className="flex items-center space-x-2 text-sm text-gray-600">
+                            {instanceInfo.profilePicUrl ? (
+                              <img
+                                src={instanceInfo.profilePicUrl}
+                                alt="WhatsApp"
+                                className="w-4 h-4 rounded-full"
+                              />
+                            ) : (
+                              <Smartphone className="w-4 h-4" />
+                            )}
+                            <span>
+                              {instanceInfo.profileName || instanceInfo.instanceName}
+                              {instanceInfo.phoneNumber && (
+                                <span className="text-gray-500 ml-1">
+                                  ({instanceInfo.phoneNumber.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '+$1 ($2) $3-$4')})
+                                </span>
+                              )}
+                            </span>
+                            {instanceInfo.isMatched ? (
+                              <CheckCircle className="w-3 h-3 text-green-500" />
+                            ) : (
+                              <AlertTriangle className="w-3 h-3 text-yellow-500" />
+                            )}
+                          </div>
+                        ) : instanceError ? (
+                          <div className="flex items-center space-x-1 text-sm text-red-600">
+                            <AlertTriangle className="w-4 h-4" />
+                            <span>{instanceError}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1 text-sm text-gray-500">
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <span>Carregando instância...</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <span>Selecione uma conversa</span>
+                  )}
+                </div>
+
+                {selectedConversation && (
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm">
+                      Transferir
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      Pausar Bot
+                    </Button>
+                  </div>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col overflow-hidden">
+              {selectedConversation ? (
+                <div className="flex flex-col h-full">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-lg mb-4">
+                    {messagesLoading ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-sm text-gray-500">Carregando mensagens...</div>
+                      </div>
+                    ) : conversationDetails?.messages?.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                          <p className="text-sm text-gray-500">Nenhuma mensagem ainda</p>
+                        </div>
+                      </div>
+                    ) : (
+                      conversationDetails?.messages?.map((message, index) => (
+                        <div key={message._id || index} className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'}`}>
+                          <div className={`max-w-xs p-3 rounded-lg ${
+                            message.sender === 'user'
+                              ? 'bg-white shadow-sm'
+                              : message.sender === 'bot'
+                              ? 'bg-blue-100 text-blue-900'
+                              : 'bg-primary text-white'
+                          }`}>
+                            {/* Renderizar conteúdo baseado no tipo de mensagem - versão completa desktop */}
+                            {message.type === 'image' && message.metadata?.mediaUrl ? (
+                              <div className="space-y-2">
+                                <img
+                                  src={message.metadata.mediaUrl}
+                                  alt="Imagem enviada"
+                                  className="rounded-lg max-w-full h-auto cursor-pointer"
+                                  onClick={() => message.metadata?.mediaUrl && window.open(message.metadata.mediaUrl, '_blank')}
+                                />
+                                {message.content !== '[Imagem enviada]' && (
+                                  <p className="text-sm">{message.content}</p>
+                                )}
+                              </div>
+                            ) : message.type === 'document' ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded">
+                                  <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center">
+                                    <span className="text-white text-xs font-bold">
+                                      {message.metadata?.fileName?.split('.').pop()?.toUpperCase() || 'DOC'}
+                                    </span>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {message.metadata?.fileName || 'Documento'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      Documento PDF
+                                    </p>
+                                  </div>
+                                  {message.metadata && message.metadata.mediaUrl && (
+                                    <button
+                                      onClick={() => message.metadata?.mediaUrl && window.open(message.metadata.mediaUrl, '_blank')}
+                                      className="text-blue-500 hover:text-blue-700 text-xs"
+                                    >
+                                      Abrir
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ) : message.type === 'audio' ? (
+                              <div className="space-y-2">
+                                {message.metadata?.mediaUrl ? (
+                                  <AudioMessage
+                                    audioUrl={message.metadata.mediaUrl}
+                                    mimetype={message.metadata?.mimetype}
+                                    isFromUser={message.sender === 'user'}
+                                    transcription={message.metadata?.transcription}
+                                    conversationId={selectedConversation}
+                                    messageId={message._id}
+                                    onTranscriptionUpdate={(transcription) => {
+                                      // Atualizar o estado local da mensagem
+                                      setConversationDetails(prev => {
+                                        if (!prev) return prev
+                                        const updatedMessages = prev.messages.map(msg =>
+                                          msg._id === message._id
+                                            ? { ...msg, metadata: { ...msg.metadata, transcription } }
+                                            : msg
+                                        )
+                                        return { ...prev, messages: updatedMessages }
+                                      })
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="flex items-center space-x-3 p-3 bg-gray-100 rounded-lg max-w-[280px]">
+                                    <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center">
+                                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z" clipRule="evenodd" />
+                                      </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-gray-700">Mensagem de áudio</p>
+                                      <p className="text-xs text-gray-500">Áudio não disponível para reprodução</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : message.type === 'video' ? (
+                              <div className="space-y-2">
+                                {message.metadata?.mediaUrl ? (
+                                  <video
+                                    controls
+                                    className="rounded-lg max-w-full h-auto"
+                                    style={{ maxHeight: '200px' }}
+                                  >
+                                    <source src={message.metadata.mediaUrl} type="video/mp4" />
+                                    Seu navegador não suporta vídeo.
+                                  </video>
+                                ) : (
+                                  <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded">
+                                    <div className="w-8 h-8 bg-purple-500 rounded flex items-center justify-center">
+                                      <span className="text-white text-xs">📹</span>
+                                    </div>
+                                    <p className="text-sm">Vídeo enviado</p>
+                                  </div>
+                                )}
+                                {message.content !== '[Vídeo enviado]' && (
+                                  <p className="text-sm">{message.content}</p>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm">{message.content}</p>
+                            )}
+                            <div className="flex items-center justify-between mt-1">
+                              <p className={`text-xs ${
+                                message.sender === 'user'
+                                  ? 'text-gray-500'
+                                  : message.sender === 'bot'
+                                  ? 'text-blue-600'
+                                  : 'opacity-80'
+                              }`}>
+                                {message.timestamp ? new Date(message.timestamp).toLocaleTimeString('pt-BR', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }) : 'Agora'}
+                              </p>
+                              {message.sender === 'user' && (
+                                <span className={`text-xs ${message.read ? 'text-blue-500' : 'text-gray-400'}`}>
+                                  {message.read ? '✓✓' : '✓'}
+                                </span>
+                              )}
+                            </div>
+                            {message.senderName && message.sender !== 'user' && (
+                              <p className={`text-xs mt-1 ${
+                                message.sender === 'bot' ? 'text-blue-600' : 'opacity-70'
+                              }`}>
+                                {message.sender === 'bot' ? 'Bot' : message.senderName}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+
+                  <div className="flex-shrink-0 space-y-2">
+                    {/* Aviso de erro de instância */}
+                    {instanceError && !instanceInfo && (
+                      <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span className="text-sm">{instanceError}</span>
+                      </div>
+                    )}
+
+                    {/* Preview do arquivo selecionado */}
+                    {selectedFile && (
+                      <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded-lg">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{selectedFile.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={removeSelectedFile}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="flex items-center space-x-2">
+                      {/* Botão de anexo */}
+                      <div className="relative">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowFileMenu(!showFileMenu)}
+                          className="p-2"
+                        >
+                          <Paperclip className="w-4 h-4" />
+                        </Button>
+
+                        {/* Menu de anexos */}
+                        {showFileMenu && (
+                          <div className="absolute bottom-full left-0 mb-2 bg-white border rounded-lg shadow-lg py-1 min-w-[120px]">
+                            <label className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                              <Image className="w-4 h-4" />
+                              <span className="text-sm">Imagem</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileSelect}
+                                className="hidden"
+                              />
+                            </label>
+                            <label className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                              <File className="w-4 h-4" />
+                              <span className="text-sm">Documento</span>
+                              <input
+                                type="file"
+                                accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
+                                onChange={handleFileSelect}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      <input
+                        type="text"
+                        placeholder="Digite sua mensagem..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                        disabled={sendingMessage}
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={sendMessage}
+                        disabled={(!newMessage.trim() && !selectedFile) || sendingMessage || !instanceInfo}
+                        title={!instanceInfo ? 'Nenhuma instância ativa encontrada' : ''}
+                      >
+                        {sendingMessage ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <div className="text-center">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Selecione uma conversa para visualizar as mensagens</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
