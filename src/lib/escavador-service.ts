@@ -56,7 +56,7 @@ interface EscavadorResponse {
 
 export class EscavadorService {
   private apiKey: string
-  private apiUrl: string = 'https://api.escavador.com/v2' // URL base da API
+  private apiUrl: string = 'https://api.escavador.com/api/v2' // URL base da API
 
   constructor(apiKey: string) {
     this.apiKey = apiKey
