@@ -411,7 +411,7 @@ async function processMessageWithAI(
 
     // 1. Extrair informações do lead usando IA
     if (config.aiConfig.settings.autoExtraction) {
-      const extractedInfo = await ai.extractLeadInfo(message, conversationHistory)
+      const extractedInfo = await ai.extractLeadInfo(message, conversationHistory, config.aiConfig.prompts.extraction)
 
       if (Object.keys(extractedInfo).length > 0) {
         console.log('AI extracted lead info:', extractedInfo)

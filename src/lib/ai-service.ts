@@ -98,8 +98,9 @@ export class PrecatoriosAI {
     }
   }
 
-  async extractLeadInfo(message: string, previousContext?: string): Promise<ExtractedInfo> {
-    const systemPrompt = `Você é um assistente especializado em extrair informações sobre precatórios de mensagens de WhatsApp.
+  async extractLeadInfo(message: string, previousContext?: string, extractionPrompt?: string): Promise<ExtractedInfo> {
+    // Use custom prompt if provided, otherwise use default
+    const systemPrompt = extractionPrompt || `Você é um assistente especializado em extrair informações sobre precatórios de mensagens de WhatsApp.
     Extraia as seguintes informações quando disponíveis:
     - Nome da pessoa
     - Telefone
@@ -111,7 +112,7 @@ export class PrecatoriosAI {
     - Tipo de documento
     - Tipo de precatório (federal/estadual/municipal/trabalhista)
     - Se é elegível baseado em: valor > 10000 e estado permitido (SP, RJ, MG, RS, PR, SC, BA, GO, DF, ES)
-    
+
     Retorne APENAS um JSON válido com os campos encontrados. Campos não encontrados devem ser omitidos.`
 
     const prompt = `Contexto anterior: ${previousContext || 'Nenhum'}
