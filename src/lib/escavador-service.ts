@@ -258,15 +258,16 @@ export class EscavadorService {
   /**
    * Método estático para obter instância do serviço
    */
-  static getInstance(): EscavadorService | null {
-    const apiKey = process.env.ESCAVADOR_API_KEY
+  static getInstance(apiKey?: string): EscavadorService | null {
+    // Priorizar API key fornecida, senão usar variável de ambiente
+    const key = apiKey || process.env.ESCAVADOR_API_KEY
 
-    if (!apiKey) {
+    if (!key) {
       console.warn('[Escavador] API Key não configurada. Serviço desabilitado.')
       return null
     }
 
-    return new EscavadorService(apiKey)
+    return new EscavadorService(key)
   }
 }
 

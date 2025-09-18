@@ -427,7 +427,7 @@ async function processMessageWithAI(
           if (shouldConsult) {
             console.log(`[Escavador] CPF detectado: ${extractedInfo.cpf}. Iniciando consulta...`)
 
-            const escavadorService = EscavadorService.getInstance()
+            const escavadorService = EscavadorService.getInstance(config.escavadorConfig.apiKey)
             if (escavadorService) {
               const escavadorData = await escavadorService.buscarProcessosPorCPF(extractedInfo.cpf)
 
