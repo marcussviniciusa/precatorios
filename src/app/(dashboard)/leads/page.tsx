@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { 
-  Users, 
-  Search, 
-  Filter, 
+import {
+  Users,
+  Search,
+  Filter,
   Plus,
   Phone,
   MessageSquare,
@@ -38,6 +39,7 @@ interface Lead {
 }
 
 export default function LeadsPage() {
+  const router = useRouter()
   const [leads, setLeads] = useState<Lead[]>([])
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -325,7 +327,12 @@ export default function LeadsPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => router.push(`/leads/${lead._id}`)}
+                            title="Ver detalhes"
+                          >
                             <Eye className="w-4 h-4" />
                           </Button>
                           <Button variant="ghost" size="sm">
@@ -337,9 +344,9 @@ export default function LeadsPage() {
                           <Button variant="ghost" size="sm">
                             <Phone className="w-4 h-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             onClick={() => handleDeleteClick(lead._id, lead.name)}
                           >
@@ -366,15 +373,20 @@ export default function LeadsPage() {
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push(`/leads/${lead._id}`)}
+                          title="Ver detalhes"
+                        >
                           <Eye className="w-4 h-4" />
                         </Button>
                         <Button variant="ghost" size="sm">
                           <MessageSquare className="w-4 h-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           onClick={() => handleDeleteClick(lead._id, lead.name)}
                         >

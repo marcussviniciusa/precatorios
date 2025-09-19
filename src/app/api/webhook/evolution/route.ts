@@ -9,6 +9,8 @@ import { broadcastNewMessage, broadcastConversationUpdated } from '@/lib/websock
 import { uploadBufferToMinio } from '@/lib/minio'
 import MediaProcessor from '@/lib/media-processor'
 import { EscavadorService, isValidCPF } from '@/lib/escavador-service'
+import TransferLog from '@/models/TransferLog'
+import AILog from '@/models/AILog'
 
 // Mapa global para controlar timeouts de processamento por conversa
 const processingTimeouts = new Map<string, NodeJS.Timeout>()
@@ -411,7 +413,7 @@ async function processMessageWithAI(
 
     // 1. Extrair informações do lead usando IA
     if (config.aiConfig.settings.autoExtraction) {
-      const extractedInfo = await ai.extractLeadInfo(message, conversationHistory, config.aiConfig.prompts.extraction)
+      const extractedInfo = await ai.extractLeadInfo(message, conversationHistory, config.aiConfig.prompts.extraction, lead._id.toString())
 
       if (Object.keys(extractedInfo).length > 0) {
         console.log('AI extracted lead info:', extractedInfo)
@@ -434,6 +436,19 @@ async function processMessageWithAI(
               if (escavadorData) {
                 console.log(`[Escavador] Dados encontrados: ${escavadorData.processosEncontrados} processos`)
                 extractedInfo.escavadorData = escavadorData
+
+                // Log Escavador query
+                await AILog.create({
+                  leadId: lead._id.toString(),
+                  type: 'escavador_query',
+                  action: 'Consulta Escavador por CPF',
+                  input: { cpf: extractedInfo.cpf },
+                  output: escavadorData,
+                  reasoning: `${escavadorData.processosEncontrados} processos encontrados`,
+                  metadata: {
+                    conversationId: conversation._id.toString()
+                  }
+                })
 
                 // Atualizar informações baseadas nos dados do Escavador
                 if (escavadorData.hasEligibleProcessos) {
@@ -460,7 +475,7 @@ async function processMessageWithAI(
 
     // 2. Calcular score usando IA
     if (config.aiConfig.settings.autoScoring) {
-      const scoreResult = await ai.calculateScore(lead, conversationHistory, escavadorEnabled)
+      const scoreResult = await ai.calculateScore(lead, conversationHistory, escavadorEnabled, lead._id.toString())
 
       if (scoreResult.score !== lead.score) {
         console.log(`AI calculated new score: ${scoreResult.score} (${scoreResult.classification})`)
@@ -480,7 +495,8 @@ async function processMessageWithAI(
         lead.score,
         conversationHistory,
         conversation.messages.length,
-        config.aiConfig.prompts.transfer
+        config.aiConfig.prompts.transfer,
+        lead._id.toString()
       )
 
       if (transferDecision.shouldTransfer) {
@@ -489,6 +505,21 @@ async function processMessageWithAI(
           status: 'transferred',
           'metadata.transferReason': transferDecision.reason
         })
+
+        // Log transfer
+        await TransferLog.create({
+          leadId: lead._id.toString(),
+          fromStatus: 'active',
+          toStatus: 'transferred',
+          reason: transferDecision.reason,
+          triggeredBy: 'ai',
+          metadata: {
+            score: lead.score,
+            classification: lead.classification,
+            conversationId: conversation._id.toString()
+          }
+        })
+
         return
       }
     }
@@ -499,7 +530,8 @@ async function processMessageWithAI(
       lead,
       conversationHistory,
       config.aiConfig.prompts.response,
-      escavadorEnabled
+      escavadorEnabled,
+      lead._id.toString()
     )
 
     // Enviar mensagem via Evolution API

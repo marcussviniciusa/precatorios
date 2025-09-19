@@ -204,3 +204,84 @@ export interface Dashboard {
     scoreDistribution: { range: string; count: number }[]
   }
 }
+
+// Logs de IA e Sistema
+export interface AILog {
+  _id?: string
+  leadId: string
+  type: 'extraction' | 'scoring' | 'transfer_decision' | 'response_generation' | 'escavador_query'
+  action: string
+  input: any
+  output: any
+  reasoning?: string
+  confidence?: number
+  model?: string
+  timestamp: Date
+  executionTime?: number
+  metadata?: {
+    conversationId?: string
+    messageId?: string
+    extractedFields?: string[]
+    previousScore?: number
+    newScore?: number
+    transferReason?: string
+  }
+}
+
+// Logs de Transferência
+export interface TransferLog {
+  _id?: string
+  leadId: string
+  fromStatus: string
+  toStatus: string
+  reason: string
+  triggeredBy: 'ai' | 'human' | 'system'
+  agent?: string
+  notes?: string
+  timestamp: Date
+  metadata?: {
+    score?: number
+    classification?: string
+    conversationId?: string
+  }
+}
+
+// Logs de Pontuação
+export interface ScoreLog {
+  _id?: string
+  leadId: string
+  previousScore: number
+  newScore: number
+  previousClassification: string
+  newClassification: string
+  reason: string
+  factors: {
+    factor: string
+    points: number
+    description?: string
+  }[]
+  triggeredBy: 'ai' | 'manual' | 'escavador'
+  timestamp: Date
+  metadata?: {
+    conversationId?: string
+    escavadorData?: boolean
+  }
+}
+
+// Resumo Detalhado do Lead
+export interface LeadSummary {
+  _id?: string
+  leadId: string
+  summary: string
+  keyPoints: string[]
+  concerns: string[]
+  opportunities: string[]
+  nextSteps: string[]
+  generatedBy: 'ai' | 'human'
+  lastUpdated: Date
+  metadata?: {
+    totalInteractions: number
+    avgResponseTime: number
+    engagementLevel: 'low' | 'medium' | 'high'
+  }
+}

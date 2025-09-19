@@ -1,5 +1,7 @@
 import dbConnect from '@/lib/mongodb'
 import BotConfig from '@/models/BotConfig'
+import AILog from '@/models/AILog'
+import ScoreLog from '@/models/ScoreLog'
 
 interface ExtractedInfo {
   name?: string
@@ -34,15 +36,19 @@ export class PrecatoriosAI {
   private responseModel: string
   private settings: any
   private baseUrl = 'https://openrouter.ai/api/v1/chat/completions'
+  public cleanJsonResponse: (response: string) => string
+  public callOpenRouter: (prompt: string, systemPrompt: string, model: string) => Promise<any>
 
   constructor(apiKey: string, analysisModel: string, responseModel: string, settings: any) {
     this.apiKey = apiKey
     this.analysisModel = analysisModel
     this.responseModel = responseModel
     this.settings = settings
+    this.cleanJsonResponse = this._cleanJsonResponse.bind(this)
+    this.callOpenRouter = this._callOpenRouter.bind(this)
   }
 
-  private cleanJsonResponse(response: string): string {
+  private _cleanJsonResponse(response: string): string {
     // Extrair JSON da resposta (pode vir com texto adicional)
     let jsonStr = response
     
@@ -62,7 +68,7 @@ export class PrecatoriosAI {
     return jsonStr.trim()
   }
 
-  private async callOpenRouter(prompt: string, systemPrompt: string, model: string): Promise<any> {
+  private async _callOpenRouter(prompt: string, systemPrompt: string, model: string): Promise<any> {
     try {
       const response = await fetch(this.baseUrl, {
         method: 'POST',
@@ -98,7 +104,9 @@ export class PrecatoriosAI {
     }
   }
 
-  async extractLeadInfo(message: string, previousContext?: string, extractionPrompt?: string): Promise<ExtractedInfo> {
+  async extractLeadInfo(message: string, previousContext?: string, extractionPrompt?: string, leadId?: string): Promise<ExtractedInfo> {
+    const startTime = Date.now()
+
     // Use custom prompt if provided, otherwise use default
     const systemPrompt = extractionPrompt || `Você é um assistente especializado em extrair informações sobre precatórios de mensagens de WhatsApp.
     Extraia as seguintes informações quando disponíveis:
@@ -116,22 +124,58 @@ export class PrecatoriosAI {
     Retorne APENAS um JSON válido com os campos encontrados. Campos não encontrados devem ser omitidos.`
 
     const prompt = `Contexto anterior: ${previousContext || 'Nenhum'}
-    
+
     Mensagem atual: ${message}
-    
+
     Extraia as informações em formato JSON.`
 
     try {
       const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel)
       const cleanJson = this.cleanJsonResponse(response)
-      return JSON.parse(cleanJson)
+      const extractedInfo = JSON.parse(cleanJson)
+
+      // Log the extraction if leadId is provided
+      if (leadId) {
+        await dbConnect()
+        await AILog.create({
+          leadId,
+          type: 'extraction',
+          action: 'Extração de informações da mensagem',
+          input: { message, previousContext },
+          output: extractedInfo,
+          reasoning: `Extraídos ${Object.keys(extractedInfo).length} campos`,
+          model: this.analysisModel,
+          executionTime: Date.now() - startTime,
+          metadata: {
+            extractedFields: Object.keys(extractedInfo)
+          }
+        })
+      }
+
+      return extractedInfo
     } catch (error) {
       console.error('Error extracting lead info:', error)
+
+      // Log error if leadId is provided
+      if (leadId) {
+        await dbConnect()
+        await AILog.create({
+          leadId,
+          type: 'extraction',
+          action: 'Falha na extração de informações',
+          input: { message, previousContext },
+          output: { error: error.message },
+          model: this.analysisModel,
+          executionTime: Date.now() - startTime
+        })
+      }
+
       return {}
     }
   }
 
-  async calculateScore(leadData: any, conversationHistory: string, escavadorEnabled: boolean = true): Promise<ScoreResult> {
+  async calculateScore(leadData: any, conversationHistory: string, escavadorEnabled: boolean = true, leadId?: string): Promise<ScoreResult> {
+    const startTime = Date.now()
     // Adicionar informações do Escavador no contexto se disponível E habilitado
     let escavadorContext = ''
     if (escavadorEnabled && leadData.escavadorData) {
@@ -177,9 +221,77 @@ export class PrecatoriosAI {
     try {
       const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel)
       const cleanJson = this.cleanJsonResponse(response)
-      return JSON.parse(cleanJson)
+      const scoreResult = JSON.parse(cleanJson)
+
+      // Log score calculation if leadId is provided
+      if (leadId && leadData.score !== undefined && scoreResult.score !== leadData.score) {
+        await dbConnect()
+
+        // Create score log
+        await ScoreLog.create({
+          leadId,
+          previousScore: leadData.score || 0,
+          newScore: scoreResult.score,
+          previousClassification: leadData.classification || 'cold',
+          newClassification: scoreResult.classification,
+          reason: scoreResult.reasoning,
+          factors: [
+            escavadorEnabled && leadData.escavadorData && {
+              factor: 'escavador_data',
+              points: 30,
+              description: 'Dados do Escavador encontrados'
+            },
+            leadData.hasPrecatorio && {
+              factor: 'has_precatorio',
+              points: 40,
+              description: 'Possui precatório confirmado'
+            },
+            leadData.urgency === 'high' && {
+              factor: 'high_urgency',
+              points: 15,
+              description: 'Urgência alta'
+            }
+          ].filter(Boolean),
+          triggeredBy: 'ai',
+          metadata: {
+            escavadorData: !!leadData.escavadorData
+          }
+        })
+
+        // Create AI log
+        await AILog.create({
+          leadId,
+          type: 'scoring',
+          action: 'Cálculo de pontuação do lead',
+          input: { leadData, conversationHistory },
+          output: scoreResult,
+          reasoning: scoreResult.reasoning,
+          model: this.analysisModel,
+          executionTime: Date.now() - startTime,
+          metadata: {
+            previousScore: leadData.score || 0,
+            newScore: scoreResult.score
+          }
+        })
+      }
+
+      return scoreResult
     } catch (error) {
       console.error('Error calculating score:', error)
+
+      if (leadId) {
+        await dbConnect()
+        await AILog.create({
+          leadId,
+          type: 'scoring',
+          action: 'Falha no cálculo de pontuação',
+          input: { leadData, conversationHistory },
+          output: { error: error.message },
+          model: this.analysisModel,
+          executionTime: Date.now() - startTime
+        })
+      }
+
       return {
         score: 0,
         classification: 'cold',
@@ -192,8 +304,10 @@ export class PrecatoriosAI {
     leadScore: number,
     conversationHistory: string,
     messageCount: number,
-    customPrompt?: string
+    customPrompt?: string,
+    leadId?: string
   ): Promise<TransferDecision> {
+    const startTime = Date.now()
     const systemPrompt = customPrompt || `Você é um assistente que decide quando transferir uma conversa para um humano.
     Critérios para transferência:
     - Score >= 60: transferir com prioridade alta
@@ -215,9 +329,43 @@ export class PrecatoriosAI {
     try {
       const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel)
       const cleanJson = this.cleanJsonResponse(response)
-      return JSON.parse(cleanJson)
+      const decision = JSON.parse(cleanJson)
+
+      // Log transfer decision if leadId is provided
+      if (leadId) {
+        await dbConnect()
+        await AILog.create({
+          leadId,
+          type: 'transfer_decision',
+          action: 'Decisão de transferência para humano',
+          input: { leadScore, messageCount, conversationHistory },
+          output: decision,
+          reasoning: decision.reason,
+          model: this.analysisModel,
+          executionTime: Date.now() - startTime,
+          metadata: {
+            transferReason: decision.shouldTransfer ? decision.reason : null
+          }
+        })
+      }
+
+      return decision
     } catch (error) {
       console.error('Error deciding transfer:', error)
+
+      if (leadId) {
+        await dbConnect()
+        await AILog.create({
+          leadId,
+          type: 'transfer_decision',
+          action: 'Falha na decisão de transferência',
+          input: { leadScore, messageCount, conversationHistory },
+          output: { error: error.message },
+          model: this.analysisModel,
+          executionTime: Date.now() - startTime
+        })
+      }
+
       return {
         shouldTransfer: false,
         reason: 'Continuar atendimento automático'
@@ -230,8 +378,10 @@ export class PrecatoriosAI {
     leadData: any,
     conversationHistory: string,
     customPrompt: string,
-    escavadorEnabled: boolean = true
+    escavadorEnabled: boolean = true,
+    leadId?: string
   ): Promise<string> {
+    const startTime = Date.now()
     // Enriquecer o prompt com dados do Escavador se disponível E habilitado
     let enrichedPrompt = customPrompt
     if (escavadorEnabled && leadData.escavadorData && leadData.escavadorData.processosEncontrados > 0) {
@@ -259,9 +409,42 @@ export class PrecatoriosAI {
 
     try {
       const response = await this.callOpenRouter(prompt, systemPrompt, this.responseModel)
-      return response.trim()
+      const generatedResponse = response.trim()
+
+      // Log response generation if leadId is provided
+      if (leadId) {
+        await dbConnect()
+        await AILog.create({
+          leadId,
+          type: 'response_generation',
+          action: 'Geração de resposta automática',
+          input: { message, leadData, conversationHistory },
+          output: { response: generatedResponse },
+          model: this.responseModel,
+          executionTime: Date.now() - startTime,
+          metadata: {
+            escavadorData: escavadorEnabled && !!leadData.escavadorData
+          }
+        })
+      }
+
+      return generatedResponse
     } catch (error) {
       console.error('Error generating response:', error)
+
+      if (leadId) {
+        await dbConnect()
+        await AILog.create({
+          leadId,
+          type: 'response_generation',
+          action: 'Falha na geração de resposta',
+          input: { message, leadData, conversationHistory },
+          output: { error: error.message },
+          model: this.responseModel,
+          executionTime: Date.now() - startTime
+        })
+      }
+
       return 'Obrigado pela mensagem! Um de nossos especialistas entrará em contato em breve.'
     }
   }
