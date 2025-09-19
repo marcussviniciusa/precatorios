@@ -18,7 +18,7 @@ export async function GET(
     const { leadId } = params
 
     // Buscar lead completo
-    const lead = await Lead.findById(leadId).lean()
+    const lead = await Lead.findById(leadId).lean() as any
 
     if (!lead) {
       return NextResponse.json(
@@ -42,34 +42,34 @@ export async function GET(
       // Conversa mais recente
       Conversation.findOne({ leadId })
         .sort({ updatedAt: -1 })
-        .lean(),
+        .lean() as any,
 
       // Atividades
       Activity.find({ leadId })
         .sort({ createdAt: -1 })
         .limit(10)
-        .lean(),
+        .lean() as any,
 
       // Resumo do lead
-      LeadSummary.findOne({ leadId }).lean(),
+      LeadSummary.findOne({ leadId }).lean() as any,
 
       // Últimos logs de IA
       AILog.find({ leadId })
         .sort({ timestamp: -1 })
         .limit(5)
-        .lean(),
+        .lean() as any,
 
       // Últimos logs de transferência
       TransferLog.find({ leadId })
         .sort({ timestamp: -1 })
         .limit(5)
-        .lean(),
+        .lean() as any,
 
       // Últimos logs de pontuação
       ScoreLog.find({ leadId })
         .sort({ timestamp: -1 })
         .limit(5)
-        .lean(),
+        .lean() as any,
 
       // Contadores
       AILog.countDocuments({ leadId }),

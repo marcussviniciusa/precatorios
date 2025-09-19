@@ -164,7 +164,7 @@ export class PrecatoriosAI {
           type: 'extraction',
           action: 'Falha na extração de informações',
           input: { message, previousContext },
-          output: { error: error.message },
+          output: { error: error instanceof Error ? error.message : 'Erro desconhecido' },
           model: this.analysisModel,
           executionTime: Date.now() - startTime
         })
@@ -286,7 +286,7 @@ export class PrecatoriosAI {
           type: 'scoring',
           action: 'Falha no cálculo de pontuação',
           input: { leadData, conversationHistory },
-          output: { error: error.message },
+          output: { error: error instanceof Error ? error.message : 'Erro desconhecido' },
           model: this.analysisModel,
           executionTime: Date.now() - startTime
         })
@@ -360,7 +360,7 @@ export class PrecatoriosAI {
           type: 'transfer_decision',
           action: 'Falha na decisão de transferência',
           input: { leadScore, messageCount, conversationHistory },
-          output: { error: error.message },
+          output: { error: error instanceof Error ? error.message : 'Erro desconhecido' },
           model: this.analysisModel,
           executionTime: Date.now() - startTime
         })
@@ -439,7 +439,7 @@ export class PrecatoriosAI {
           type: 'response_generation',
           action: 'Falha na geração de resposta',
           input: { message, leadData, conversationHistory },
-          output: { error: error.message },
+          output: { error: error instanceof Error ? error.message : 'Erro desconhecido' },
           model: this.responseModel,
           executionTime: Date.now() - startTime
         })

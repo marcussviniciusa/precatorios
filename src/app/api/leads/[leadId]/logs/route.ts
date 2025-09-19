@@ -19,12 +19,12 @@ export async function GET(
     const limit = parseInt(searchParams.get('limit') || '50')
     const skip = parseInt(searchParams.get('skip') || '0')
 
-    let logs = []
+    let logs: any[] = []
 
     if (type === 'ai' || type === 'all' || !type) {
       const aiLogs = await AILog.find({ leadId })
         .sort({ timestamp: -1 })
-        .limit(type === 'all' || !type ? limit : undefined)
+        .limit(type === 'all' || !type ? limit : 50)
         .skip(type === 'all' || !type ? 0 : skip)
         .lean()
 
@@ -34,7 +34,7 @@ export async function GET(
     if (type === 'transfer' || type === 'all' || !type) {
       const transferLogs = await TransferLog.find({ leadId })
         .sort({ timestamp: -1 })
-        .limit(type === 'all' || !type ? limit : undefined)
+        .limit(type === 'all' || !type ? limit : 50)
         .skip(type === 'all' || !type ? 0 : skip)
         .lean()
 
@@ -44,7 +44,7 @@ export async function GET(
     if (type === 'score' || type === 'all' || !type) {
       const scoreLogs = await ScoreLog.find({ leadId })
         .sort({ timestamp: -1 })
-        .limit(type === 'all' || !type ? limit : undefined)
+        .limit(type === 'all' || !type ? limit : 50)
         .skip(type === 'all' || !type ? 0 : skip)
         .lean()
 

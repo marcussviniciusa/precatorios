@@ -16,7 +16,6 @@ import {
   TrendingUp,
   Brain,
   FileSearch,
-  MessageSquare,
   AlertCircle,
   CheckCircle2,
   Clock,
@@ -49,7 +48,7 @@ interface LeadDetails {
 export default function LeadDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const leadId = params.leadId as string
+  const leadId = params?.leadId as string
 
   const [details, setDetails] = useState<LeadDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)

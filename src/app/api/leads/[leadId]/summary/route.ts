@@ -47,10 +47,10 @@ export async function POST(
 
     // Buscar dados do lead
     const [lead, conversation, aiLogs, scoreLogs] = await Promise.all([
-      Lead.findById(leadId).lean(),
-      Conversation.findOne({ leadId }).lean(),
-      AILog.find({ leadId }).sort({ timestamp: -1 }).limit(20).lean(),
-      ScoreLog.find({ leadId }).sort({ timestamp: -1 }).limit(10).lean()
+      Lead.findById(leadId).lean() as any,
+      Conversation.findOne({ leadId }).lean() as any,
+      AILog.find({ leadId }).sort({ timestamp: -1 }).limit(20).lean() as any,
+      ScoreLog.find({ leadId }).sort({ timestamp: -1 }).limit(10).lean() as any
     ])
 
     if (!lead) {
@@ -66,7 +66,7 @@ export async function POST(
       messagesCount: conversation?.messages?.length || 0,
       lastMessages: conversation?.messages?.slice(-10) || [],
       aiLogsCount: aiLogs.length,
-      scoreHistory: scoreLogs.map(log => ({
+      scoreHistory: scoreLogs.map((log: any) => ({
         from: log.previousScore,
         to: log.newScore,
         reason: log.reason
