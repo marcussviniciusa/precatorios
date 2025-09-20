@@ -543,7 +543,7 @@ async function processMessageWithAI(
 
     // 2. Calcular score usando IA
     if (config.aiConfig.settings.autoScoring) {
-      const scoreResult = await ai.calculateScore(lead, conversationHistory, escavadorEnabled, lead._id.toString())
+      const scoreResult = await ai.calculateScore(lead, conversationHistory, escavadorEnabled, lead._id.toString(), config.aiConfig.prompts.scoring)
 
       if (scoreResult.score !== lead.score) {
         console.log(`AI calculated new score: ${scoreResult.score} (${scoreResult.classification})`)

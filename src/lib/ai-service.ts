@@ -120,21 +120,8 @@ export class PrecatoriosAI {
   async extractLeadInfo(message: string, previousContext?: string, extractionPrompt?: string, leadId?: string): Promise<ExtractedInfo> {
     const startTime = Date.now()
 
-    // Use custom prompt if provided, otherwise use default
-    const systemPrompt = extractionPrompt || `Você é um assistente especializado em extrair informações sobre precatórios de mensagens de WhatsApp.
-    Extraia as seguintes informações quando disponíveis:
-    - Nome da pessoa
-    - Telefone
-    - Se possui precatório (sim/não)
-    - Valor do precatório (número)
-    - Estado (sigla)
-    - Cidade
-    - Urgência (baixa/média/alta)
-    - Tipo de documento
-    - Tipo de precatório (federal/estadual/municipal/trabalhista)
-    - Se é elegível baseado em: valor > 10000 e estado permitido (SP, RJ, MG, RS, PR, SC, BA, GO, DF, ES)
-
-    Retorne APENAS um JSON válido com os campos encontrados. Campos não encontrados devem ser omitidos.`
+    // Use apenas prompt da interface - sem fallback
+    const systemPrompt = extractionPrompt || ''
 
     const prompt = `Contexto anterior: ${previousContext || 'Nenhum'}
 
@@ -187,12 +174,15 @@ export class PrecatoriosAI {
     }
   }
 
-  async calculateScore(leadData: any, conversationHistory: string, escavadorEnabled: boolean = true, leadId?: string): Promise<ScoreResult> {
+  async calculateScore(leadData: any, conversationHistory: string, escavadorEnabled: boolean = true, leadId?: string, customPrompt?: string): Promise<ScoreResult> {
     const startTime = Date.now()
+
+    // Usar apenas prompt da interface - sem fallback
+    let systemPrompt = customPrompt || ''
+
     // Adicionar informações do Escavador no contexto se disponível E habilitado
-    let escavadorContext = ''
     if (escavadorEnabled && leadData.escavadorData) {
-      escavadorContext = `
+      const escavadorContext = `
 
     DADOS DO ESCAVADOR (Consulta automática):
     - Processos encontrados: ${leadData.escavadorData.processosEncontrados}
@@ -203,25 +193,9 @@ export class PrecatoriosAI {
     - Se processos encontrados no Escavador: +30 pontos
     - Se valor total > R$ 50.000: +15 pontos adicional
     - Se múltiplos processos (>1): +10 pontos`
+
+      systemPrompt += escavadorContext
     }
-
-    const systemPrompt = `Você é um especialista em qualificação de leads de precatórios.
-    Calcule um score de 0 a 100 baseado em:
-    - Possui precatório confirmado: +40 pontos
-    - Valor elegível (>10.000): +20 pontos
-    - Estado elegível: +10 pontos
-    - Demonstra urgência: +15 pontos
-    - Enviou documentos: +10 pontos
-    - Interesse claro: +5 pontos
-    ${escavadorContext}
-
-    Classifique como:
-    - hot (80-100): Lead muito quente, pronto para fechar
-    - warm (50-79): Lead interessado, precisa acompanhamento
-    - cold (20-49): Lead frio, precisa nutrição
-    - discard (0-19): Não qualificado
-
-    Retorne um JSON com: score (número), classification (string), reasoning (explicação breve)`
 
     const prompt = `Dados do lead:
     ${JSON.stringify(leadData, null, 2)}
@@ -321,15 +295,8 @@ export class PrecatoriosAI {
     leadId?: string
   ): Promise<TransferDecision> {
     const startTime = Date.now()
-    const systemPrompt = customPrompt || `Você é um assistente que decide quando transferir uma conversa para um humano.
-    Critérios para transferência:
-    - Score >= 60: transferir com prioridade alta
-    - Mensagens com urgência explícita: transferir imediatamente
-    - Cliente pedindo atendimento humano: transferir sempre
-    - Mais de 5 mensagens sem resolução: considerar transferência
-    - Documentos enviados: transferir para análise
-
-    Retorne um JSON com: shouldTransfer (boolean), reason (string), priority (low/medium/high)`
+    // Usar apenas prompt da interface - sem fallback
+    const systemPrompt = customPrompt || ''
 
     const prompt = `Score do lead: ${leadScore}
     Número de mensagens: ${messageCount}
