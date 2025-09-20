@@ -458,7 +458,7 @@ export default function AIConfigPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="temperature">Temperatura (0.0 - 1.0)</Label>
+              <Label htmlFor="temperature">Temperatura para Respostas (0.0 - 1.0)</Label>
               <Input
                 id="temperature"
                 type="number"
@@ -469,12 +469,12 @@ export default function AIConfigPage() {
                 onChange={(e) => updateAISetting('temperature', parseFloat(e.target.value))}
               />
               <p className="text-sm text-gray-600">
-                Controla a criatividade das respostas (0.1 = conservador, 0.9 = criativo)
+                Controla a criatividade das respostas aos clientes (0.1 = conservador, 0.9 = criativo). Análises usam valores fixos para precisão.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="maxTokens">Máximo de Tokens</Label>
+              <Label htmlFor="maxTokens">Máximo de Tokens para Respostas</Label>
               <Input
                 id="maxTokens"
                 type="number"
@@ -484,7 +484,7 @@ export default function AIConfigPage() {
                 onChange={(e) => updateAISetting('maxTokens', parseInt(e.target.value))}
               />
               <p className="text-sm text-gray-600">
-                Limite máximo de tokens por resposta (aproximadamente palavras)
+                Limite máximo de tokens para respostas aos clientes. Análises (extração/scoring/transferência) usam 800 tokens fixos.
               </p>
             </div>
           </div>

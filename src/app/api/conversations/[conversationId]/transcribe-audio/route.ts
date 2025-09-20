@@ -71,7 +71,9 @@ export async function POST(
         groqApiKey: config.mediaProcessing.groq?.apiKey,
         openRouterEnabled: config.mediaProcessing.openRouter?.enabled || false,
         openRouterApiKey: config.mediaProcessing.openRouter?.apiKey || config.aiConfig?.apiKey,
-        imageDescriptionModel: config.mediaProcessing.openRouter?.imageModel || 'openrouter/sonoma-sky-alpha'
+        imageDescriptionModel: config.mediaProcessing.openRouter?.imageModel || 'openrouter/sonoma-sky-alpha',
+        temperature: config.aiConfig?.settings?.temperature || 0.3,
+        maxTokens: config.aiConfig?.settings?.maxTokens || 500
       })
 
       // Transcrever o áudio

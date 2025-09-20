@@ -37,7 +37,7 @@ export class PrecatoriosAI {
   private settings: any
   private baseUrl = 'https://openrouter.ai/api/v1/chat/completions'
   public cleanJsonResponse: (response: string) => string
-  public callOpenRouter: (prompt: string, systemPrompt: string, model: string) => Promise<any>
+  public callOpenRouter: (prompt: string, systemPrompt: string, model: string, isResponse?: boolean) => Promise<any>
 
   constructor(apiKey: string, analysisModel: string, responseModel: string, settings: any) {
     this.apiKey = apiKey
@@ -68,8 +68,21 @@ export class PrecatoriosAI {
     return jsonStr.trim()
   }
 
-  private async _callOpenRouter(prompt: string, systemPrompt: string, model: string): Promise<any> {
+  private async _callOpenRouter(prompt: string, systemPrompt: string, model: string, isResponse: boolean = false): Promise<any> {
     try {
+      // Configurações diferentes para análise vs resposta
+      let temperature, maxTokens
+
+      if (isResponse) {
+        // Para resposta: usar configurações da interface
+        temperature = this.settings?.temperature || 0.3
+        maxTokens = this.settings?.maxTokens || 500
+      } else {
+        // Para análise (extração/scoring/transfer): valores fixos otimizados
+        temperature = 0.2  // Mais conservador para precisão
+        maxTokens = 800    // Suficiente para análises detalhadas
+      }
+
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
@@ -84,8 +97,8 @@ export class PrecatoriosAI {
             { role: 'system', content: systemPrompt },
             { role: 'user', content: prompt }
           ],
-          temperature: this.settings?.temperature || 0.3,
-          max_tokens: this.settings?.maxTokens || 500
+          temperature: temperature,
+          max_tokens: maxTokens
         })
       })
 
@@ -130,7 +143,7 @@ export class PrecatoriosAI {
     Extraia as informações em formato JSON.`
 
     try {
-      const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel)
+      const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel, false) // Análise: valores fixos
       const cleanJson = this.cleanJsonResponse(response)
       const extractedInfo = JSON.parse(cleanJson)
 
@@ -219,7 +232,7 @@ export class PrecatoriosAI {
     Calcule o score e classificação.`
 
     try {
-      const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel)
+      const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel, false) // Análise: valores fixos
       const cleanJson = this.cleanJsonResponse(response)
       const scoreResult = JSON.parse(cleanJson)
 
@@ -327,7 +340,7 @@ export class PrecatoriosAI {
     Deve transferir para humano?`
 
     try {
-      const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel)
+      const response = await this.callOpenRouter(prompt, systemPrompt, this.analysisModel, false) // Análise: valores fixos
       const cleanJson = this.cleanJsonResponse(response)
       const decision = JSON.parse(cleanJson)
 
@@ -408,7 +421,7 @@ export class PrecatoriosAI {
     Gere uma resposta apropriada.`
 
     try {
-      const response = await this.callOpenRouter(prompt, systemPrompt, this.responseModel)
+      const response = await this.callOpenRouter(prompt, systemPrompt, this.responseModel, true) // Resposta: configurações da interface
       const generatedResponse = response.trim()
 
       // Log response generation if leadId is provided

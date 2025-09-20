@@ -9,6 +9,8 @@ interface MediaProcessorConfig {
   openRouterEnabled?: boolean
   openRouterApiKey?: string
   imageDescriptionModel?: string
+  temperature?: number
+  maxTokens?: number
 }
 
 class MediaProcessor {
@@ -92,11 +94,11 @@ class MediaProcessor {
                 ]
               }
             ],
-            temperature: 0.3,
-            max_tokens: 500
+            temperature: this.config.temperature || 0.3,
+            max_tokens: this.config.maxTokens || 500
           })
         })
-        
+
         if (response.ok) {
           const data = await response.json()
           const description = data.choices?.[0]?.message?.content

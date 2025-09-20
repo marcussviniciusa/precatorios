@@ -162,7 +162,9 @@ export async function POST(request: NextRequest) {
                 groqApiKey: config.mediaProcessing?.groq?.apiKey,
                 openRouterEnabled: config.mediaProcessing?.openRouter?.enabled || false,
                 openRouterApiKey: config.mediaProcessing?.openRouter?.apiKey || config.aiConfig?.apiKey || process.env.OPENROUTER_API_KEY,
-                imageDescriptionModel: config.mediaProcessing?.openRouter?.imageModel || 'openrouter/sonoma-sky-alpha'
+                imageDescriptionModel: config.mediaProcessing?.openRouter?.imageModel || 'openrouter/sonoma-sky-alpha',
+                temperature: config.aiConfig?.settings?.temperature || 0.3,
+                maxTokens: config.aiConfig?.settings?.maxTokens || 500
               })
 
               if (mediaProcessor.isConfigured()) {
@@ -237,7 +239,9 @@ export async function POST(request: NextRequest) {
                       groqApiKey: config.mediaProcessing.groq?.apiKey || process.env.GROQ_API_KEY,
                       openRouterEnabled: config.mediaProcessing.openRouter?.enabled || false,
                       openRouterApiKey: config.mediaProcessing.openRouter?.apiKey || config.aiConfig?.apiKey || process.env.OPENROUTER_API_KEY,
-                      imageDescriptionModel: config.mediaProcessing.openRouter?.imageModel || 'openrouter/sonoma-sky-alpha'
+                      imageDescriptionModel: config.mediaProcessing.openRouter?.imageModel || 'openrouter/sonoma-sky-alpha',
+                      temperature: config.aiConfig?.settings?.temperature || 0.3,
+                      maxTokens: config.aiConfig?.settings?.maxTokens || 500
                     })
                     
                     if (mediaProcessor.isConfigured()) {
