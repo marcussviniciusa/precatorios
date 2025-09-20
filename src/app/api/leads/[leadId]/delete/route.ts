@@ -3,6 +3,10 @@ import dbConnect from '@/lib/mongodb'
 import Lead from '@/models/Lead'
 import Conversation from '@/models/Conversation'
 import Activity from '@/models/Activity'
+import AILog from '@/models/AILog'
+import ScoreLog from '@/models/ScoreLog'
+import TransferLog from '@/models/TransferLog'
+import LeadSummary from '@/models/LeadSummary'
 import { getTokenFromRequest, verifyToken } from '@/lib/auth'
 
 export async function DELETE(
@@ -40,18 +44,34 @@ export async function DELETE(
       )
     }
 
-    // Deletar dados relacionados
+    // Deletar TODOS os dados relacionados
     console.log(`Deleting all data for lead ${leadId} (phone: ${lead.phone})`)
 
-    // 1. Deletar todas as conversas do lead
+    // 1. Deletar logs de IA (extração, scoring, resposta, transferência)
+    const aiLogsDeleted = await AILog.deleteMany({ leadId })
+    console.log(`Deleted ${aiLogsDeleted.deletedCount} AI logs`)
+
+    // 2. Deletar logs de pontuação (histórico de scores)
+    const scoreLogsDeleted = await ScoreLog.deleteMany({ leadId })
+    console.log(`Deleted ${scoreLogsDeleted.deletedCount} score logs`)
+
+    // 3. Deletar logs de transferência
+    const transferLogsDeleted = await TransferLog.deleteMany({ leadId })
+    console.log(`Deleted ${transferLogsDeleted.deletedCount} transfer logs`)
+
+    // 4. Deletar resumos do lead
+    const summariesDeleted = await LeadSummary.deleteMany({ leadId })
+    console.log(`Deleted ${summariesDeleted.deletedCount} lead summaries`)
+
+    // 5. Deletar todas as conversas do lead
     const conversationsDeleted = await Conversation.deleteMany({ leadId })
     console.log(`Deleted ${conversationsDeleted.deletedCount} conversations`)
 
-    // 2. Deletar todas as atividades do lead
+    // 6. Deletar todas as atividades do lead
     const activitiesDeleted = await Activity.deleteMany({ leadId })
     console.log(`Deleted ${activitiesDeleted.deletedCount} activities`)
 
-    // 3. Deletar o lead
+    // 7. Deletar o lead principal
     await Lead.findByIdAndDelete(leadId)
     console.log(`Deleted lead ${leadId}`)
 
@@ -60,7 +80,11 @@ export async function DELETE(
       deletedData: {
         lead: 1,
         conversations: conversationsDeleted.deletedCount,
-        activities: activitiesDeleted.deletedCount
+        activities: activitiesDeleted.deletedCount,
+        aiLogs: aiLogsDeleted.deletedCount,
+        scoreLogs: scoreLogsDeleted.deletedCount,
+        transferLogs: transferLogsDeleted.deletedCount,
+        summaries: summariesDeleted.deletedCount
       }
     })
 
