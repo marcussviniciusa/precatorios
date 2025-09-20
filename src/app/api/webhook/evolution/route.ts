@@ -118,13 +118,77 @@ export async function POST(request: NextRequest) {
         const mimetype = message.message?.documentMessage?.mimetype ||
                         message.message?.imageMessage?.mimetype ||
                         message.message?.videoMessage?.mimetype ||
-                        message.message?.audioMessage?.mimetype
+                        message.message?.audioMessage?.mimetype ||
+                        message.message?.audioMessage?.mime_type // WhatsApp Official API format
 
         let minioUrl: string | undefined
         let transcription: string | undefined
 
+        // Debug para entender o problema
+        if (messageType === 'audio') {
+          console.log('Audio message detected:')
+          console.log('- messageType:', messageType)
+          console.log('- message.base64 present:', !!message.base64)
+          console.log('- data.message.base64 present:', !!(data.message?.base64))
+          console.log('- message.base64 length:', message.base64?.length || 0)
+          console.log('- data.message.base64 length:', data.message?.base64?.length || 0)
+          console.log('- whatsappMediaUrl:', whatsappMediaUrl)
+          console.log('- audioMessage.url:', message.message?.audioMessage?.url)
+        }
+
+        // Verificar se é áudio do WhatsApp Official API (tem base64 direto)
+        if (messageType === 'audio' && data.message?.base64 && !whatsappMediaUrl) {
+          console.log('Processing WhatsApp Official API audio from base64')
+
+          try {
+            // Converter base64 para buffer
+            const mediaBuffer = Buffer.from(data.message.base64, 'base64')
+            console.log(`Audio decoded from base64 (${mediaBuffer.length} bytes)`)
+
+            // Upload para MinIO
+            const fileName = `audio_${message.key.id}.ogg`
+            minioUrl = await uploadBufferToMinio(mediaBuffer, fileName, mimetype || 'audio/ogg', 'audio')
+
+            // Buscar configuração de processamento de mídia
+            const config = await BotConfig.findOne().sort({ updatedAt: -1 })
+
+            if (config?.mediaProcessing?.enabled) {
+              // Processar com IA (transcrição)
+              const mediaProcessor = MediaProcessor.getInstance()
+              await mediaProcessor.initialize({
+                googleVisionEnabled: config.mediaProcessing?.googleVision?.enabled || false,
+                googleVisionKeyPath: config.mediaProcessing?.googleVision?.keyPath,
+                groqEnabled: config.mediaProcessing?.groq?.enabled || false,
+                groqApiKey: config.mediaProcessing?.groq?.apiKey,
+                openRouterEnabled: config.mediaProcessing?.openRouter?.enabled || false,
+                openRouterApiKey: config.mediaProcessing?.openRouter?.apiKey || config.aiConfig?.apiKey || process.env.OPENROUTER_API_KEY,
+                imageDescriptionModel: config.mediaProcessing?.openRouter?.imageModel || 'openrouter/sonoma-sky-alpha'
+              })
+
+              if (mediaProcessor.isConfigured()) {
+                const extractedText = await mediaProcessor.processMedia(
+                  mediaBuffer,
+                  mimetype || 'audio/ogg',
+                  'audio'
+                )
+
+                if (extractedText) {
+                  transcription = extractedText
+                  messageText = extractedText // ✅ IA recebe transcrição!
+                  console.log(`WhatsApp Official audio transcribed: ${extractedText.substring(0, 100)}...`)
+                }
+              } else {
+                console.log('Media processor not configured for audio transcription')
+              }
+            } else {
+              console.log('Media processing disabled in configuration')
+            }
+          } catch (error) {
+            console.error('Error processing WhatsApp Official audio:', error)
+          }
+        }
         // Se há URL de mídia, baixar usando Evolution API (decodificado) e salvar no MinIO
-        if (whatsappMediaUrl) {
+        else if (whatsappMediaUrl) {
           try {
             console.log(`Attempting to download media using Evolution API for message: ${message.key.id}`)
             
