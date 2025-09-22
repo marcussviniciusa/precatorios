@@ -108,11 +108,6 @@ export default function HomePage() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-xs text-gray-600">
-                Usuário demo: admin@demo.com / senha: 123456
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
