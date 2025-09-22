@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -16,58 +17,77 @@ import {
   Brain,
   X,
   Send,
+  UserCog,
+  LogOut,
 } from 'lucide-react'
 
-const navigation = [
+// Todas as rotas do sistema
+const allNavigation = [
   {
     name: 'Dashboard',
     href: '/dashboard',
-    icon: LayoutDashboard
+    icon: LayoutDashboard,
+    requireAdmin: false
   },
   {
     name: 'WhatsApp',
     href: '/whatsapp',
-    icon: Smartphone
+    icon: Smartphone,
+    requireAdmin: false
   },
   {
     name: 'Conversas',
     href: '/conversations',
-    icon: MessageSquare
+    icon: MessageSquare,
+    requireAdmin: false
   },
   {
     name: 'Disparo de Mensagens',
     href: '/broadcast',
-    icon: Send
+    icon: Send,
+    requireAdmin: false
   },
   {
     name: 'Leads',
     href: '/leads',
-    icon: Users
+    icon: Users,
+    requireAdmin: false
   },
   {
     name: 'CRM',
     href: '/crm',
-    icon: FileText
+    icon: FileText,
+    requireAdmin: false
   },
   {
     name: 'Relatórios',
     href: '/reports',
-    icon: BarChart3
+    icon: BarChart3,
+    requireAdmin: false
+  },
+  {
+    name: 'Usuários',
+    href: '/users',
+    icon: UserCog,
+    requireAdmin: true
   },
   {
     name: 'Bot Config',
     href: '/config',
-    icon: Bot
+    icon: Bot,
+    requireAdmin: true
   },
   {
     name: 'IA Config',
     href: '/config/ai',
-    icon: Brain
+    icon: Brain,
+    requireAdmin: true
   },
   {
     name: 'Configurações',
     href: '/settings',
-    icon: Settings
+    icon: Settings,
+    requireAdmin: false
   }
 ]
 
@@ -78,6 +98,32 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const [user, setUser] = useState<any>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    // Carregar dados do usuário do localStorage
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      const parsedUser = JSON.parse(userData)
+      setUser(parsedUser)
+      setIsAdmin(parsedUser.role === 'admin')
+    }
+  }, [])
+
+  // Filtrar navegação baseada no role do usuário
+  const navigation = allNavigation.filter(item => {
+    if (item.requireAdmin) {
+      return isAdmin
+    }
+    return true
+  })
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    window.location.href = '/login'
+  }
 
   return (
     <>
@@ -114,18 +160,30 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-              A
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {user?.name || 'Usuário'}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {user?.email || 'email@example.com'}
+                </p>
+                <p className="text-xs text-green-600 font-medium">
+                  {isAdmin ? 'Admin' : 'Usuário'}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                Admin User
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                admin@example.com
-              </p>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+              title="Sair"
+            >
+              <LogOut className="w-4 h-4 text-gray-500" />
+            </button>
           </div>
         </div>
       </div>
@@ -176,18 +234,30 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-              A
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {user?.name || 'Usuário'}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {user?.email || 'email@example.com'}
+                </p>
+                <p className="text-xs text-green-600 font-medium">
+                  {isAdmin ? 'Admin' : 'Usuário'}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                Admin User
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                admin@example.com
-              </p>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+              title="Sair"
+            >
+              <LogOut className="w-4 h-4 text-gray-500" />
+            </button>
           </div>
         </div>
       </div>

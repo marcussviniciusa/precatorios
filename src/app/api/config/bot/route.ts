@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import BotConfig from '@/models/BotConfig'
-import { getTokenFromRequest, verifyToken } from '@/lib/auth'
+import { requireAdmin } from '@/lib/middleware/auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,22 +30,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await dbConnect()
-    
-    const token = getTokenFromRequest(request)
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Token de acesso requerido' },
-        { status: 401 }
-      )
-    }
 
-    const payload = verifyToken(token)
-    if (!payload) {
-      return NextResponse.json(
-        { error: 'Token inválido' },
-        { status: 401 }
-      )
+    // Requer usuário admin
+    const authResult = requireAdmin(request)
+    if (authResult instanceof NextResponse) {
+      return authResult
     }
+    const user = authResult
 
     const configData = await request.json()
     console.log('Config data received:', JSON.stringify(configData, null, 2))
@@ -97,7 +88,7 @@ export async function POST(request: NextRequest) {
         need_documents: 'Para prosseguir, precisarei que envie alguns documentos.',
         outside_hours: 'Nosso atendimento funciona das 8h às 18h. Retornarei seu contato no próximo horário comercial.'
       },
-      updatedBy: payload.userId
+      updatedBy: user.userId
     }
 
     // Find existing config or create new one

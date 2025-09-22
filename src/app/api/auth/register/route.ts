@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import User from '@/models/User'
 import { generateToken } from '@/lib/auth'
+import { requireAdmin } from '@/lib/middleware/auth'
 
 export async function POST(request: NextRequest) {
   try {
     await dbConnect()
-    
-    const { name, email, password, role = 'analyst' } = await request.json()
+
+    // Apenas admin pode criar novos usuários
+    const authResult = requireAdmin(request)
+    if (authResult instanceof NextResponse) {
+      return authResult
+    }
+
+    const { name, email, password, role = 'user' } = await request.json()
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -19,6 +26,14 @@ export async function POST(request: NextRequest) {
     if (password.length < 6) {
       return NextResponse.json(
         { error: 'Senha deve ter pelo menos 6 caracteres' },
+        { status: 400 }
+      )
+    }
+
+    // Validar role
+    if (role && !['admin', 'user'].includes(role)) {
+      return NextResponse.json(
+        { error: 'Role inválido. Use "admin" ou "user"' },
         { status: 400 }
       )
     }
