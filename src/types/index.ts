@@ -3,7 +3,7 @@ export interface User {
   name: string
   email: string
   password?: string
-  role: 'admin' | 'manager' | 'analyst'
+  role: 'admin' | 'user'
   phone?: string
   avatar?: string
   isActive: boolean
