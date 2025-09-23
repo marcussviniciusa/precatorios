@@ -30,6 +30,7 @@ interface Lead {
   score: number
   status: 'new' | 'qualified' | 'in_analysis' | 'proposal' | 'closed_won' | 'closed_lost'
   precatorioValue?: number
+  precatorioType?: string
   state?: string
   city?: string
   source: string
@@ -46,6 +47,7 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [classificationFilter, setClassificationFilter] = useState<string>('all')
+  const [precatorioTypeFilter, setPrecatorioTypeFilter] = useState<string>('all')
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, leadId: string, leadName: string }>({ show: false, leadId: '', leadName: '' })
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -100,8 +102,12 @@ export default function LeadsPage() {
       filtered = filtered.filter(lead => lead.classification === classificationFilter)
     }
 
+    if (precatorioTypeFilter !== 'all') {
+      filtered = filtered.filter(lead => lead.precatorioType === precatorioTypeFilter)
+    }
+
     setFilteredLeads(filtered)
-  }, [leads, searchTerm, statusFilter, classificationFilter])
+  }, [leads, searchTerm, statusFilter, classificationFilter, precatorioTypeFilter])
 
   const handleDeleteClick = (leadId: string, leadName: string) => {
     setDeleteConfirm({ show: true, leadId, leadName })
@@ -138,23 +144,6 @@ export default function LeadsPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    const configs: Record<string, { color: string; label: string }> = {
-      new: { color: 'bg-blue-100 text-blue-800', label: 'Novo' },
-      qualified: { color: 'bg-green-100 text-green-800', label: 'Qualificado' },
-      in_analysis: { color: 'bg-yellow-100 text-yellow-800', label: 'Em Análise' },
-      proposal: { color: 'bg-purple-100 text-purple-800', label: 'Proposta' },
-      closed_won: { color: 'bg-green-100 text-green-800', label: 'Fechado' },
-      closed_lost: { color: 'bg-red-100 text-red-800', label: 'Perdido' }
-    }
-    
-    const config = configs[status] || configs.new
-    return (
-      <Badge className={config.color}>
-        {config.label}
-      </Badge>
-    )
-  }
 
   const getClassificationBadge = (classification: string) => {
     const variants: Record<string, any> = {
@@ -163,9 +152,29 @@ export default function LeadsPage() {
       cold: { variant: 'cold', label: 'Frio' },
       discard: { variant: 'outline', label: 'Descarte' }
     }
-    
+
     const config = variants[classification] || variants.cold
     return <Badge variant={config.variant}>{config.label}</Badge>
+  }
+
+  const getPrecatorioTypeBadge = (type?: string) => {
+    if (!type) {
+      return <span className="text-gray-400">-</span>
+    }
+
+    const typeConfigs: Record<string, { color: string; label: string }> = {
+      federal: { color: 'bg-blue-100 text-blue-800', label: 'Federal' },
+      estadual: { color: 'bg-green-100 text-green-800', label: 'Estadual' },
+      municipal: { color: 'bg-purple-100 text-purple-800', label: 'Municipal' },
+      trabalhista: { color: 'bg-orange-100 text-orange-800', label: 'Trabalhista' }
+    }
+
+    const config = typeConfigs[type] || { color: 'bg-gray-100 text-gray-800', label: type }
+    return (
+      <Badge className={config.color}>
+        {config.label}
+      </Badge>
+    )
   }
 
   if (isLoading) {
@@ -235,6 +244,18 @@ export default function LeadsPage() {
                 <option value="cold">Frio</option>
                 <option value="discard">Descarte</option>
               </select>
+
+              <select
+                value={precatorioTypeFilter}
+                onChange={(e) => setPrecatorioTypeFilter(e.target.value)}
+                className="w-full sm:w-auto border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="all">Tipo</option>
+                <option value="federal">Federal</option>
+                <option value="estadual">Estadual</option>
+                <option value="municipal">Municipal</option>
+                <option value="trabalhista">Trabalhista</option>
+              </select>
             </div>
           </div>
         </CardHeader>
@@ -269,7 +290,7 @@ export default function LeadsPage() {
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Contato</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Score</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Classificação</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Tipo</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Valor</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Localização</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Responsável</th>
@@ -309,7 +330,7 @@ export default function LeadsPage() {
                         {getClassificationBadge(lead.classification)}
                       </td>
                       <td className="py-3 px-4">
-                        {getStatusBadge(lead.status)}
+                        {getPrecatorioTypeBadge(lead.precatorioType)}
                       </td>
                       <td className="py-3 px-4">
                         {lead.precatorioValue ? (
@@ -433,8 +454,8 @@ export default function LeadsPage() {
                         <div className="mt-1">{getClassificationBadge(lead.classification)}</div>
                       </div>
                       <div>
-                        <span className="text-gray-500">Status:</span>
-                        <div className="mt-1">{getStatusBadge(lead.status)}</div>
+                        <span className="text-gray-500">Tipo:</span>
+                        <div className="mt-1">{getPrecatorioTypeBadge(lead.precatorioType)}</div>
                       </div>
                       <div>
                         <span className="text-gray-500">Valor:</span>
