@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     // Se quiser apenas os próprios
     if (myQueue) {
-      query['metadata.assignedAgentId'] = user.email
+      query['metadata.assignedAgentId'] = user.userId
     }
 
     // Buscar conversas em fila (sem populate para evitar erro de schema)
@@ -115,6 +115,7 @@ export async function GET(request: NextRequest) {
       total: queue.length,
       waiting: queue.filter(q => !q.assignedAgent).length,
       assigned: queue.filter(q => q.assignedAgent).length,
+      mine: queue.filter(q => q.metadata?.assignedAgentId === user.userId).length,
       highPriority: queue.filter(q => q.priority === 'high').length,
       mediumPriority: queue.filter(q => q.priority === 'medium').length,
       lowPriority: queue.filter(q => q.priority === 'low').length,
@@ -141,6 +142,7 @@ export async function GET(request: NextRequest) {
 
         allQueue.push({
           assignedAgent: conv.assignedAgent,
+          assignedAgentId: conv.metadata?.assignedAgentId,
           priority: conv.metadata?.priority || 'medium'
         })
       }
@@ -149,6 +151,7 @@ export async function GET(request: NextRequest) {
         total: allQueue.length,
         waiting: allQueue.filter(q => !q.assignedAgent).length,
         assigned: allQueue.filter(q => q.assignedAgent).length,
+        mine: allQueue.filter(q => q.assignedAgentId === user.userId).length,
         highPriority: allQueue.filter(q => q.priority === 'high').length,
         mediumPriority: allQueue.filter(q => q.priority === 'medium').length,
         lowPriority: allQueue.filter(q => q.priority === 'low').length,
@@ -215,7 +218,7 @@ export async function POST(request: NextRequest) {
         nextConversation.assignedAgent = user.userId || user.email
         nextConversation.metadata = {
           ...nextConversation.metadata,
-          assignedAgentId: user.email,
+          assignedAgentId: user.userId,
           assignedAt: new Date()
         }
         await nextConversation.save()
@@ -291,7 +294,7 @@ export async function POST(request: NextRequest) {
               assignedAgent: agent.name || agent.email,
               'metadata.assignedAgentId': agentId,
               'metadata.assignedAt': new Date(),
-              'metadata.assignedBy': user.email
+              'metadata.assignedBy': user.userId
             }
           }
         )

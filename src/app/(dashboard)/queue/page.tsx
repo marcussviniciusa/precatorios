@@ -42,6 +42,7 @@ interface QueueStats {
   total: number
   waiting: number
   assigned: number
+  mine: number
   highPriority: number
   mediumPriority: number
   lowPriority: number
@@ -310,7 +311,7 @@ export default function QueuePage() {
           size="sm"
           onClick={() => setFilter('mine')}
         >
-          Minhas
+          Minhas ({globalStats?.mine || 0})
         </Button>
       </div>
 
