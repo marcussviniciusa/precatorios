@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -21,10 +21,8 @@ import {
   Clock,
   RefreshCw,
   MessageSquare,
-  Image,
   File,
   Play,
-  Pause,
   Download
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
@@ -62,11 +60,7 @@ export default function LeadDetailsPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
 
-  useEffect(() => {
-    fetchLeadDetails()
-  }, [leadId])
-
-  const fetchLeadDetails = async () => {
+  const fetchLeadDetails = useCallback(async () => {
     try {
       const response = await fetch(`/api/leads/${leadId}/details`)
       if (response.ok) {
@@ -87,7 +81,11 @@ export default function LeadDetailsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [leadId, router])
+
+  useEffect(() => {
+    fetchLeadDetails()
+  }, [fetchLeadDetails])
 
   const generateSummary = async () => {
     setIsGeneratingSummary(true)
@@ -411,7 +409,7 @@ export default function LeadDetailsPage() {
                               <p className="text-sm font-medium text-gray-700">Áudio</p>
                               {message.metadata?.transcription && (
                                 <p className="text-xs text-gray-600 mt-1 italic">
-                                  "{message.metadata.transcription.substring(0, 50)}..."
+                                  &quot;{message.metadata.transcription.substring(0, 50)}...&quot;
                                 </p>
                               )}
                             </div>
