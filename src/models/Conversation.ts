@@ -43,7 +43,26 @@ const ConversationSchema = new Schema<Conversation>({
   metadata: {
     lastBotResponse: Date,
     transferReason: String,
-    qualificationData: Schema.Types.Mixed
+    qualificationData: Schema.Types.Mixed,
+    priority: {
+      type: String,
+      enum: ['low', 'medium', 'high'],
+      default: 'medium'
+    },
+    transferredAt: Date,
+    transferredBy: String,
+    assignedAgentId: String,
+    assignedAt: Date,
+    assignedBy: String,
+    pausedAt: Date,
+    pausedBy: String,
+    pauseReason: String,
+    resumedAt: Date,
+    resumedBy: String,
+    removedFromQueueBy: String,
+    removedFromQueueAt: Date,
+    priorityChangedBy: String,
+    priorityChangedAt: Date
   }
 }, {
   timestamps: true

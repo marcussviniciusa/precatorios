@@ -34,6 +34,8 @@ export async function POST(
       priority          // 'low' | 'medium' | 'high'
     } = body
 
+    console.log('Transfer API - Received data:', { action, priority, reason, assignToAgent })
+
     const conversationId = params.conversationId
 
     // Buscar conversa e lead
@@ -56,13 +58,22 @@ export async function POST(
         // Transferir para atendimento humano
         newStatus = 'transferred'
         conversation.status = newStatus
-        conversation.metadata = {
+        console.log('Transfer API - Original metadata:', conversation.metadata)
+        console.log('Transfer API - Priority to save:', priority)
+
+        const newMetadata = {
           ...conversation.metadata,
           transferReason: reason || 'Transferência manual',
           transferredAt: new Date(),
           transferredBy: user.email,
           priority: priority || 'medium'
         }
+
+        console.log('Transfer API - New metadata object:', newMetadata)
+
+        conversation.metadata = newMetadata
+
+        console.log('Transfer API - Final metadata after assignment:', conversation.metadata)
 
         // Se especificou agente, atribuir
         if (assignToAgent) {

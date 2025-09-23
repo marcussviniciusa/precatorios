@@ -697,16 +697,18 @@ export default function ConversationsPage() {
 
   // Função para transferir conversa (com modal)
   const handleTransferConversation = async () => {
-    if (!selectedConversation || !transferReason.trim()) return
+    if (!selectedConversation) return
 
     try {
       setTransferring(true)
 
       const payload: any = {
         action: 'transfer',
-        reason: transferReason,
+        reason: transferReason.trim() || 'Transferência via interface',
         priority: transferPriority
       }
+
+      console.log('Frontend - Sending transfer payload:', payload)
 
       // Se um agente foi selecionado, incluir na transferência
       if (selectedAgent) {
@@ -1733,7 +1735,7 @@ export default function ConversationsPage() {
                 {/* Motivo da transferência */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Motivo da transferência *
+                    Motivo da transferência (opcional)
                   </label>
                   <textarea
                     value={transferReason}
@@ -1742,6 +1744,9 @@ export default function ConversationsPage() {
                     rows={3}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Se não informado, será usado o motivo padrão
+                  </p>
                 </div>
 
                 {/* Prioridade */}
@@ -1751,7 +1756,10 @@ export default function ConversationsPage() {
                   </label>
                   <select
                     value={transferPriority}
-                    onChange={(e) => setTransferPriority(e.target.value as 'low' | 'medium' | 'high')}
+                    onChange={(e) => {
+                      console.log('Priority changed to:', e.target.value)
+                      setTransferPriority(e.target.value as 'low' | 'medium' | 'high')
+                    }}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   >
                     <option value="low">Baixa</option>
@@ -1802,7 +1810,7 @@ export default function ConversationsPage() {
                 </Button>
                 <Button
                   onClick={handleTransferConversation}
-                  disabled={transferring || !transferReason.trim()}
+                  disabled={transferring}
                   className="flex-1"
                 >
                   {transferring ? (

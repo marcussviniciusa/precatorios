@@ -71,6 +71,21 @@ export interface Conversation {
     lastBotResponse?: Date
     transferReason?: string
     qualificationData?: any
+    priority?: 'low' | 'medium' | 'high'
+    transferredAt?: Date
+    transferredBy?: string
+    assignedAgentId?: string
+    assignedAt?: Date
+    assignedBy?: string
+    pausedAt?: Date
+    pausedBy?: string
+    pauseReason?: string
+    resumedAt?: Date
+    resumedBy?: string
+    removedFromQueueBy?: string
+    removedFromQueueAt?: Date
+    priorityChangedBy?: string
+    priorityChangedAt?: Date
   }
   createdAt?: Date
   updatedAt?: Date
