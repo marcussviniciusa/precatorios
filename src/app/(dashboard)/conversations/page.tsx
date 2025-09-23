@@ -708,7 +708,6 @@ export default function ConversationsPage() {
         priority: transferPriority
       }
 
-      console.log('Frontend - Sending transfer payload:', payload)
 
       // Se um agente foi selecionado, incluir na transferência
       if (selectedAgent) {
@@ -1756,10 +1755,7 @@ export default function ConversationsPage() {
                   </label>
                   <select
                     value={transferPriority}
-                    onChange={(e) => {
-                      console.log('Priority changed to:', e.target.value)
-                      setTransferPriority(e.target.value as 'low' | 'medium' | 'high')
-                    }}
+                    onChange={(e) => setTransferPriority(e.target.value as 'low' | 'medium' | 'high')}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   >
                     <option value="low">Baixa</option>

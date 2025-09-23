@@ -76,9 +76,6 @@ export async function GET(request: NextRequest) {
       const now = new Date()
       const waitingTime = Math.floor((now.getTime() - new Date(transferredAt).getTime()) / 1000 / 60) // em minutos
 
-      const priority = conv.metadata?.priority || 'medium'
-      console.log(`Queue API - Conversation ${conv._id}: metadata.priority = ${conv.metadata?.priority}, final priority = ${priority}`)
-
       queue.push({
         _id: conv._id.toString(),
         conversationId: conv._id.toString(),
@@ -87,7 +84,7 @@ export async function GET(request: NextRequest) {
         leadPhone: lead.phone,
         score: lead.score || 0,
         classification: lead.classification || 'cold',
-        priority: priority,
+        priority: conv.metadata?.priority || 'medium',
         waitingTime,
         position: conv.assignedAgent ? 0 : position++, // 0 se já atribuído
         transferredAt: new Date(transferredAt),
