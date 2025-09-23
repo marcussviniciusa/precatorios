@@ -64,13 +64,19 @@ export async function POST(
           priority: priority || 'medium'
         }
 
-        // Se especificou agente, atribuir
+        // Se especificou agente, atribuir; senão, limpar atribuição (fica aguardando na fila)
         if (assignToAgent) {
           const agent = await User.findById(assignToAgent)
           if (agent) {
             conversation.assignedAgent = agent.name || agent.email
             conversation.metadata.assignedAgentId = assignToAgent
+            conversation.metadata.assignedAt = new Date()
           }
+        } else {
+          // Sem agente selecionado - vai para fila de aguardando
+          conversation.assignedAgent = undefined
+          conversation.metadata.assignedAgentId = undefined
+          conversation.metadata.assignedAt = undefined
         }
 
         // Criar log de transferência
