@@ -49,6 +49,17 @@ export default function LeadsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, leadId: string, leadName: string }>({ show: false, leadId: '', leadName: '' })
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Função para calcular número do lead baseado na ordem de chegada
+  const getLeadNumber = (lead: Lead) => {
+    // Ordenar todos os leads por data de criação (mais antigo primeiro)
+    const sortedByCreation = [...leads].sort((a, b) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
+
+    // Retornar posição do lead na lista ordenada + 1
+    return sortedByCreation.findIndex(l => l._id === lead._id) + 1
+  }
+
   useEffect(() => {
     async function fetchLeads() {
       try {
@@ -253,6 +264,7 @@ export default function LeadsPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-medium text-gray-900 w-16">#</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Nome</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Contato</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Score</th>
@@ -268,6 +280,11 @@ export default function LeadsPage() {
                   <tbody>
                   {filteredLeads.map((lead) => (
                     <tr key={lead._id} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <span className="font-medium text-primary text-sm">
+                          #{getLeadNumber(lead)}
+                        </span>
+                      </td>
                       <td className="py-3 px-4">
                         <div className="font-medium text-gray-900">{lead.name}</div>
                       </td>
@@ -366,7 +383,10 @@ export default function LeadsPage() {
                   <div key={lead._id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <h3 className="font-medium text-gray-900 text-lg">{lead.name}</h3>
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">#{getLeadNumber(lead)}</span>
+                          <h3 className="font-medium text-gray-900 text-lg">{lead.name}</h3>
+                        </div>
                         <div className="text-sm text-gray-600 mt-1">
                           <div>{lead.phone}</div>
                           {lead.email && <div>{lead.email}</div>}
