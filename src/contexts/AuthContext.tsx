@@ -74,17 +74,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(data.error || 'Erro ao fazer login')
     }
 
-    // Salvar token e dados do usuário
+    // Salvar token e dados do usuário no localStorage e cookies
     localStorage.setItem('token', data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
+
+    // Definir cookie seguro para o middleware
+    document.cookie = `token=${data.token}; path=/; secure; samesite=strict; max-age=86400`
+
     setUser(data.user)
   }
 
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+
+    // Remover cookie
+    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+
     setUser(null)
-    window.location.href = '/login'
+    window.location.href = '/'
   }
 
   const updateUser = (updatedUser: User) => {

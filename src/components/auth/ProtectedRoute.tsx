@@ -15,9 +15,9 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
 
   useEffect(() => {
     if (!loading) {
-      // Se não está logado, redirecionar para login
+      // Se não está logado, redirecionar para página inicial (login)
       if (!user) {
-        router.push('/login')
+        router.push('/')
         return
       }
 
