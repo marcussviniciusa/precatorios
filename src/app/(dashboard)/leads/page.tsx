@@ -16,7 +16,9 @@ import {
   MoreVertical,
   Eye,
   Edit,
-  Trash2
+  Trash2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { formatCurrency, formatDate, getLeadStatusColor } from '@/lib/utils'
 import { getAuthHeaders } from '@/lib/client-auth'
@@ -51,15 +53,16 @@ export default function LeadsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, leadId: string, leadName: string }>({ show: false, leadId: '', leadName: '' })
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Função para calcular número do lead baseado na ordem de chegada
-  const getLeadNumber = (lead: Lead) => {
-    // Ordenar todos os leads por data de criação (mais antigo primeiro)
-    const sortedByCreation = [...leads].sort((a, b) =>
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    )
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [paginatedLeads, setPaginatedLeads] = useState<Lead[]>([])
+  const [totalPages, setTotalPages] = useState(0)
 
-    // Retornar posição do lead na lista ordenada + 1
-    return sortedByCreation.findIndex(l => l._id === lead._id) + 1
+  // Função para calcular número do lead baseado na ordem de chegada e paginação
+  const getLeadNumber = (_lead: Lead, index: number) => {
+    // Calcular número global baseado na página atual e índice
+    return (currentPage - 1) * itemsPerPage + index + 1
   }
 
   useEffect(() => {
@@ -107,7 +110,20 @@ export default function LeadsPage() {
     }
 
     setFilteredLeads(filtered)
+
+    // Reset para primeira página quando filtros mudarem
+    setCurrentPage(1)
   }, [leads, searchTerm, statusFilter, classificationFilter, precatorioTypeFilter])
+
+  // useEffect para paginação
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    const paginatedData = filteredLeads.slice(startIndex, endIndex)
+
+    setPaginatedLeads(paginatedData)
+    setTotalPages(Math.ceil(filteredLeads.length / itemsPerPage))
+  }, [filteredLeads, currentPage, itemsPerPage])
 
   const handleDeleteClick = (leadId: string, leadName: string) => {
     setDeleteConfirm({ show: true, leadId, leadName })
@@ -119,7 +135,7 @@ export default function LeadsPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm.leadId) return
-    
+
     setIsDeleting(true)
     try {
       const response = await fetch(`/api/leads/${deleteConfirm.leadId}/delete`, {
@@ -142,6 +158,16 @@ export default function LeadsPage() {
       setIsDeleting(false)
       setDeleteConfirm({ show: false, leadId: '', leadName: '' })
     }
+  }
+
+  // Funções de paginação
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage)
+    setCurrentPage(1) // Reset para primeira página
   }
 
 
@@ -299,11 +325,11 @@ export default function LeadsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                  {filteredLeads.map((lead) => (
+                  {paginatedLeads.map((lead, index) => (
                     <tr key={lead._id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <span className="font-medium text-primary text-sm">
-                          #{getLeadNumber(lead)}
+                          #{getLeadNumber(lead, index)}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -400,12 +426,12 @@ export default function LeadsPage() {
 
               {/* Versão Mobile - Cards */}
               <div className="lg:hidden space-y-4">
-                {filteredLeads.map((lead) => (
+                {paginatedLeads.map((lead, index) => (
                   <div key={lead._id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
-                          <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">#{getLeadNumber(lead)}</span>
+                          <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">#{getLeadNumber(lead, index)}</span>
                           <h3 className="font-medium text-gray-900 text-lg">{lead.name}</h3>
                         </div>
                         <div className="text-sm text-gray-600 mt-1">
@@ -484,6 +510,83 @@ export default function LeadsPage() {
                 ))}
               </div>
             </>
+          )}
+
+          {/* Paginação */}
+          {filteredLeads.length > 0 && (
+            <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span>Mostrar</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                  className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+                <span>de {filteredLeads.length} leads</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Anterior</span>
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  {(() => {
+                    const pages = []
+                    const maxVisiblePages = 5
+                    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
+                    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
+
+                    if (endPage - startPage + 1 < maxVisiblePages) {
+                      startPage = Math.max(1, endPage - maxVisiblePages + 1)
+                    }
+
+                    for (let i = startPage; i <= endPage; i++) {
+                      pages.push(
+                        <Button
+                          key={i}
+                          variant={currentPage === i ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(i)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {i}
+                        </Button>
+                      )
+                    }
+
+                    return pages
+                  })()}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1"
+                >
+                  <span className="hidden sm:inline">Próximo</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="text-sm text-gray-600">
+                Página {currentPage} de {totalPages}
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
