@@ -327,6 +327,15 @@ interface ConversationDetails {
   _id: string
   leadId: any
   status: string
+  assignedAgent?: string
+  metadata?: {
+    transferredAt?: string
+    pausedAt?: string
+    assignedAt?: string
+    transferReason?: string
+    pauseReason?: string
+    [key: string]: any
+  }
   messages: ConversationMessage[]
 }
 
@@ -356,6 +365,12 @@ export default function ConversationsPage() {
   const [showConversationList, setShowConversationList] = useState(true)
   const [transferring, setTransferring] = useState(false)
   const [pausingBot, setPausingBot] = useState(false)
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [transferReason, setTransferReason] = useState('')
+  const [transferPriority, setTransferPriority] = useState<'low' | 'medium' | 'high'>('medium')
+  const [selectedAgent, setSelectedAgent] = useState<string>('')
+  const [agents, setAgents] = useState<any[]>([])
+  const [loadingAgents, setLoadingAgents] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Stable callback functions
@@ -652,23 +667,56 @@ export default function ConversationsPage() {
     setShowConversationList(true)
   }
 
-  // Função para transferir conversa
-  const handleTransferConversation = async () => {
-    if (!selectedConversation) return
+  // Função para buscar agentes disponíveis
+  const fetchAgents = async () => {
+    try {
+      setLoadingAgents(true)
+      const response = await fetch('/api/agents', {
+        headers: getAuthHeaders()
+      })
 
-    const reason = prompt('Motivo da transferência:')
-    if (!reason) return
+      if (response.ok) {
+        const data = await response.json()
+        setAgents(data)
+      }
+    } catch (error) {
+      console.error('Error fetching agents:', error)
+    } finally {
+      setLoadingAgents(false)
+    }
+  }
+
+  // Função para abrir modal de transferência
+  const openTransferModal = () => {
+    setTransferReason('')
+    setTransferPriority('medium')
+    setSelectedAgent('')
+    setShowTransferModal(true)
+    fetchAgents()
+  }
+
+  // Função para transferir conversa (com modal)
+  const handleTransferConversation = async () => {
+    if (!selectedConversation || !transferReason.trim()) return
 
     try {
       setTransferring(true)
+
+      const payload: any = {
+        action: 'transfer',
+        reason: transferReason,
+        priority: transferPriority
+      }
+
+      // Se um agente foi selecionado, incluir na transferência
+      if (selectedAgent) {
+        payload.assignToAgent = selectedAgent
+      }
+
       const response = await fetch(`/api/conversations/${selectedConversation}/transfer`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({
-          action: 'transfer',
-          reason,
-          priority: 'medium'
-        })
+        body: JSON.stringify(payload)
       })
 
       if (response.ok) {
@@ -689,7 +737,17 @@ export default function ConversationsPage() {
           } : null)
         }
 
-        alert('Conversa transferida com sucesso!')
+        // Fechar modal e limpar estado
+        setShowTransferModal(false)
+        setTransferReason('')
+        setSelectedAgent('')
+
+        // Determinar mensagem baseada na atribuição
+        const agentName = selectedAgent ?
+          agents.find(a => a._id === selectedAgent)?.name || 'agente selecionado' :
+          'fila de atendimento'
+
+        alert(`Conversa transferida para ${agentName} com sucesso!`)
       } else {
         const error = await response.json()
         alert('Erro ao transferir: ' + error.error)
@@ -1336,12 +1394,50 @@ export default function ConversationsPage() {
                   )}
                 </div>
 
+                {/* Informações de atribuição */}
+                {selectedConversation && conversationDetails && (
+                  <div className="mb-2">
+                    {conversationDetails.status === 'transferred' && (
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                            Transferida
+                          </Badge>
+                          {conversationDetails.assignedAgent && (
+                            <div className="flex items-center space-x-1 text-gray-600">
+                              <User className="w-3 h-3" />
+                              <span>Atribuída para: <strong>{conversationDetails.assignedAgent}</strong></span>
+                            </div>
+                          )}
+                        </div>
+                        {conversationDetails.metadata?.transferredAt && (
+                          <div className="text-xs text-gray-500">
+                            {formatDate(conversationDetails.metadata.transferredAt)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {conversationDetails.status === 'paused' && (
+                      <div className="flex items-center justify-between text-sm">
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                          Bot Pausado
+                        </Badge>
+                        {conversationDetails.metadata?.pausedAt && (
+                          <div className="text-xs text-gray-500">
+                            Pausado em: {formatDate(conversationDetails.metadata.pausedAt)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {selectedConversation && (
                   <div className="flex space-x-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleTransferConversation}
+                      onClick={openTransferModal}
                       disabled={transferring || conversationDetails?.status === 'transferred'}
                     >
                       {transferring ? 'Transferindo...' : 'Transferir'}
@@ -1621,6 +1717,106 @@ export default function ConversationsPage() {
               )}
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Modal de Transferência */}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Transferir Conversa
+              </h3>
+
+              <div className="space-y-4">
+                {/* Motivo da transferência */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Motivo da transferência *
+                  </label>
+                  <textarea
+                    value={transferReason}
+                    onChange={(e) => setTransferReason(e.target.value)}
+                    placeholder="Ex: Cliente solicitou falar com humano, dúvida complexa..."
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+
+                {/* Prioridade */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Prioridade
+                  </label>
+                  <select
+                    value={transferPriority}
+                    onChange={(e) => setTransferPriority(e.target.value as 'low' | 'medium' | 'high')}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="low">Baixa</option>
+                    <option value="medium">Média</option>
+                    <option value="high">Alta</option>
+                  </select>
+                </div>
+
+                {/* Seleção de agente */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Atribuir para agente (opcional)
+                  </label>
+                  {loadingAgents ? (
+                    <div className="flex items-center justify-center py-4">
+                      <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                      <span className="text-sm text-gray-600">Carregando agentes...</span>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedAgent}
+                      onChange={(e) => setSelectedAgent(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >
+                      <option value="">-- Fila de atendimento --</option>
+                      {agents.map((agent) => (
+                        <option key={agent._id} value={agent._id}>
+                          {agent.name || agent.email} ({agent.role})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Se não selecionar um agente, a conversa ficará na fila geral
+                  </p>
+                </div>
+              </div>
+
+              {/* Botões */}
+              <div className="flex space-x-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowTransferModal(false)}
+                  disabled={transferring}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleTransferConversation}
+                  disabled={transferring || !transferReason.trim()}
+                  className="flex-1"
+                >
+                  {transferring ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                      Transferindo...
+                    </>
+                  ) : (
+                    'Transferir'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

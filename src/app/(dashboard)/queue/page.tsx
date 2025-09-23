@@ -16,7 +16,8 @@ import {
   RefreshCw,
   Phone,
   MessageSquare,
-  TrendingUp
+  TrendingUp,
+  User
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { getAuthHeaders } from '@/lib/client-auth'
@@ -344,11 +345,30 @@ export default function QueuePage() {
                         <span className="text-gray-500">•</span>
                         <span className="text-sm text-gray-600">{item.leadPhone}</span>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 mb-2">
                         {getPriorityBadge(item.priority)}
                         {getClassificationBadge(item.classification)}
                         <Badge variant="outline">Score: {item.score}</Badge>
                       </div>
+                      {/* Status de atribuição mais visível */}
+                      {item.assignedAgent ? (
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
+                            <User className="w-3 h-3 mr-1" />
+                            Atribuído: {item.assignedAgent}
+                          </Badge>
+                          {item.metadata?.assignedAt && (
+                            <span className="text-xs text-gray-500">
+                              {formatDate(item.metadata.assignedAt)}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                          <Clock className="w-3 h-3 mr-1" />
+                          Aguardando atribuição
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
@@ -359,11 +379,9 @@ export default function QueuePage() {
                         <Clock className="w-4 h-4" />
                         <span>{item.waitingTime}m aguardando</span>
                       </div>
-                      {item.assignedAgent && (
-                        <div className="text-xs text-green-600 mt-1">
-                          Atribuído: {item.assignedAgent}
-                        </div>
-                      )}
+                      <div className="text-xs text-gray-500 mt-1">
+                        Transferido: {formatDate(item.transferredAt)}
+                      </div>
                     </div>
 
                     {/* Actions */}
@@ -376,16 +394,41 @@ export default function QueuePage() {
                         <MessageSquare className="w-4 h-4" />
                       </Button>
 
-                      {/* Priority Change */}
-                      <select
-                        value={item.priority}
-                        onChange={(e) => handleChangePriority(item.conversationId, e.target.value)}
-                        className="border rounded px-2 py-1 text-sm"
-                      >
-                        <option value="high">Alta</option>
-                        <option value="medium">Média</option>
-                        <option value="low">Baixa</option>
-                      </select>
+                      {/* Priority Change - only for unassigned */}
+                      {!item.assignedAgent && (
+                        <select
+                          value={item.priority}
+                          onChange={(e) => handleChangePriority(item.conversationId, e.target.value)}
+                          className="border rounded px-2 py-1 text-sm"
+                          title="Alterar prioridade"
+                        >
+                          <option value="high">Alta</option>
+                          <option value="medium">Média</option>
+                          <option value="low">Baixa</option>
+                        </select>
+                      )}
+
+                      {/* Assign button for unassigned conversations */}
+                      {!item.assignedAgent && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            // Could add a modal to select agent, for now just use take_next
+                            fetch('/api/queue', {
+                              method: 'POST',
+                              headers: getAuthHeaders(),
+                              body: JSON.stringify({
+                                action: 'take_next'
+                              })
+                            }).then(() => fetchQueue())
+                          }}
+                          className="text-green-600 hover:text-green-700"
+                          title="Assumir esta conversa"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </Button>
+                      )}
 
                       <Button
                         variant="ghost"
