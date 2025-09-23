@@ -40,7 +40,9 @@ export async function GET(request: NextRequest) {
     // Parâmetros de query
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status') || 'transferred'
-    const assignedOnly = searchParams.get('assignedOnly') === 'true'
+    const assignedOnlyParam = searchParams.get('assignedOnly')
+    const assignedOnly = assignedOnlyParam === 'true'
+    const assignedOnlyFalse = assignedOnlyParam === 'false'
     const myQueue = searchParams.get('myQueue') === 'true'
 
     // Base query
@@ -49,6 +51,15 @@ export async function GET(request: NextRequest) {
     // Se quiser apenas os atribuídos
     if (assignedOnly) {
       query.assignedAgent = { $exists: true, $ne: null }
+    }
+
+    // Se quiser apenas os aguardando (não atribuídos)
+    if (assignedOnlyFalse) {
+      query.$or = [
+        { assignedAgent: { $exists: false } },
+        { assignedAgent: null },
+        { assignedAgent: '' }
+      ]
     }
 
     // Se quiser apenas os próprios
