@@ -39,10 +39,17 @@ export async function comparePassword(password: string, hashedPassword: string):
 
 export function getTokenFromRequest(request: Request): string | null {
   const authHeader = request.headers.get('authorization')
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null
   }
-  
+
   return authHeader.substring(7)
+}
+
+// Mock authOptions for compatibility with NextAuth code
+export const authOptions = {
+  providers: [],
+  secret: JWT_SECRET,
+  callbacks: {}
 }

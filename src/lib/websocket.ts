@@ -1,11 +1,14 @@
 import { Server } from 'socket.io'
 import { NextApiRequest, NextApiResponse } from 'next'
 
-export type WebSocketEvent = 
+export type WebSocketEvent =
   | 'new-message'
   | 'conversation-updated'
   | 'conversation-deleted'
   | 'instance-status-changed'
+  | 'notification'
+  | 'queue-updated'
+  | 'agent-status-changed'
 
 export interface NewMessageEvent {
   conversationId: string
@@ -25,6 +28,26 @@ export interface InstanceStatusChangedEvent {
   instanceName: string
   status: string
   phoneNumber?: string
+}
+
+export interface NotificationEvent {
+  type: 'new_transfer' | 'direct_assignment' | 'queue_update' | 'system_alert'
+  userId?: string // Para notificações direcionadas
+  priority?: 'low' | 'medium' | 'high'
+  data: any
+}
+
+export interface QueueUpdatedEvent {
+  action: 'added' | 'removed' | 'assigned' | 'priority_changed'
+  conversationId: string
+  position?: number
+  stats?: any
+}
+
+export interface AgentStatusChangedEvent {
+  agentId: string
+  status: 'online' | 'offline' | 'busy' | 'available'
+  activeConversations?: number
 }
 
 // Global variable declaration for proper singleton
@@ -56,19 +79,31 @@ export const initializeSocketServer = (res: NextApiResponse): Server => {
 
     globalForSocket.socketio.on('connection', (socket) => {
       console.log('Client connected to WebSocket:', socket.id)
-      
+
       // Join conversation rooms for targeted updates
       socket.on('join-conversation', (conversationId: string) => {
         socket.join(`conversation:${conversationId}`)
         console.log(`Client ${socket.id} joined conversation:${conversationId}`)
       })
-      
+
       // Leave conversation rooms
       socket.on('leave-conversation', (conversationId: string) => {
         socket.leave(`conversation:${conversationId}`)
         console.log(`Client ${socket.id} left conversation:${conversationId}`)
       })
-      
+
+      // Join user-specific room for notifications
+      socket.on('join-user', (userId: string) => {
+        socket.join(`user:${userId}`)
+        console.log(`Client ${socket.id} joined user:${userId}`)
+      })
+
+      // Join agent queue room
+      socket.on('join-queue', () => {
+        socket.join('queue:agents')
+        console.log(`Client ${socket.id} joined queue:agents`)
+      })
+
       socket.on('disconnect', () => {
         console.log('Client disconnected from WebSocket:', socket.id)
       })
@@ -140,5 +175,45 @@ export const broadcastInstanceStatusChanged = (instanceName: string, status: str
     console.log(`Broadcasted instance status changed: ${instanceName} - ${status}`)
   } else {
     console.log('WebSocket server not initialized, instance status change not broadcasted')
+  }
+}
+
+// Broadcast notification to all agents or specific user
+export const broadcastNotification = (notification: NotificationEvent) => {
+  const io = globalForSocket.socketio
+  if (io) {
+    if (notification.userId) {
+      // Send to specific user room
+      io.to(`user:${notification.userId}`).emit('notification', notification)
+      console.log(`Broadcasted notification to user:${notification.userId}`)
+    } else {
+      // Send to all agents
+      io.to('queue:agents').emit('notification', notification)
+      console.log('Broadcasted notification to all agents')
+    }
+  } else {
+    console.log('WebSocket server not initialized, notification not broadcasted')
+  }
+}
+
+// Broadcast queue updates to agents
+export const broadcastQueueUpdate = (event: QueueUpdatedEvent) => {
+  const io = globalForSocket.socketio
+  if (io) {
+    io.to('queue:agents').emit('queue-updated', event)
+    console.log(`Broadcasted queue update: ${event.action} for conversation ${event.conversationId}`)
+  } else {
+    console.log('WebSocket server not initialized, queue update not broadcasted')
+  }
+}
+
+// Broadcast agent status changes
+export const broadcastAgentStatusChanged = (event: AgentStatusChangedEvent) => {
+  const io = globalForSocket.socketio
+  if (io) {
+    io.emit('agent-status-changed', event)
+    console.log(`Broadcasted agent status changed: ${event.agentId} - ${event.status}`)
+  } else {
+    console.log('WebSocket server not initialized, agent status change not broadcasted')
   }
 }

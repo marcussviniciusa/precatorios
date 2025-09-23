@@ -19,6 +19,7 @@ import {
   Send,
   UserCog,
   LogOut,
+  Clock,
 } from 'lucide-react'
 
 // Todas as rotas do sistema
@@ -39,6 +40,12 @@ const allNavigation = [
     name: 'Conversas',
     href: '/conversations',
     icon: MessageSquare,
+    requireAdmin: false
+  },
+  {
+    name: 'Fila de Atendimento',
+    href: '/queue',
+    icon: Clock,
     requireAdmin: false
   },
   {

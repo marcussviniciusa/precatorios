@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useWebSocket } from '@/hooks/useWebSocket'
+import { getAuthHeaders } from '@/lib/client-auth'
 
 // Component for WhatsApp-style audio messages
 interface AudioMessageProps {
@@ -353,6 +354,8 @@ export default function ConversationsPage() {
   const [deletingConversation, setDeletingConversation] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [showConversationList, setShowConversationList] = useState(true)
+  const [transferring, setTransferring] = useState(false)
+  const [pausingBot, setPausingBot] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Stable callback functions
@@ -647,6 +650,110 @@ export default function ConversationsPage() {
     setInstanceInfo(null)
     setInstanceError(null)
     setShowConversationList(true)
+  }
+
+  // Função para transferir conversa
+  const handleTransferConversation = async () => {
+    if (!selectedConversation) return
+
+    const reason = prompt('Motivo da transferência:')
+    if (!reason) return
+
+    try {
+      setTransferring(true)
+      const response = await fetch(`/api/conversations/${selectedConversation}/transfer`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          action: 'transfer',
+          reason,
+          priority: 'medium'
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+
+        // Atualizar conversa na lista
+        setConversations(prev => prev.map(conv =>
+          conv._id === selectedConversation
+            ? { ...conv, status: 'transferred' }
+            : conv
+        ))
+
+        // Atualizar detalhes se necessário
+        if (conversationDetails) {
+          setConversationDetails(prev => prev ? {
+            ...prev,
+            status: 'transferred'
+          } : null)
+        }
+
+        alert('Conversa transferida com sucesso!')
+      } else {
+        const error = await response.json()
+        alert('Erro ao transferir: ' + error.error)
+      }
+    } catch (error) {
+      console.error('Error transferring conversation:', error)
+      alert('Erro ao transferir conversa')
+    } finally {
+      setTransferring(false)
+    }
+  }
+
+  // Função para pausar/retomar bot
+  const handlePauseBotToggle = async () => {
+    if (!selectedConversation || !conversationDetails) return
+
+    const action = conversationDetails.status === 'paused' ? 'resume' : 'pause'
+    const confirmMsg = action === 'pause'
+      ? 'Pausar o bot nesta conversa?'
+      : 'Retomar o atendimento automático?'
+
+    if (!confirm(confirmMsg)) return
+
+    try {
+      setPausingBot(true)
+      const response = await fetch(`/api/conversations/${selectedConversation}/transfer`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          action,
+          reason: action === 'pause' ? 'Bot pausado manualmente' : 'Bot retomado'
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+
+        // Atualizar conversa na lista
+        const newStatus = action === 'pause' ? 'paused' : 'active'
+        setConversations(prev => prev.map(conv =>
+          conv._id === selectedConversation
+            ? { ...conv, status: newStatus }
+            : conv
+        ))
+
+        // Atualizar detalhes
+        if (conversationDetails) {
+          setConversationDetails(prev => prev ? {
+            ...prev,
+            status: newStatus
+          } : null)
+        }
+
+        alert(action === 'pause' ? 'Bot pausado!' : 'Bot retomado!')
+      } else {
+        const error = await response.json()
+        alert('Erro: ' + error.error)
+      }
+    } catch (error) {
+      console.error('Error toggling bot:', error)
+      alert('Erro ao alterar status do bot')
+    } finally {
+      setPausingBot(false)
+    }
   }
 
   // Função para excluir conversa
@@ -1231,11 +1338,22 @@ export default function ConversationsPage() {
 
                 {selectedConversation && (
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      Transferir
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTransferConversation}
+                      disabled={transferring || conversationDetails?.status === 'transferred'}
+                    >
+                      {transferring ? 'Transferindo...' : 'Transferir'}
                     </Button>
-                    <Button variant="outline" size="sm">
-                      Pausar Bot
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePauseBotToggle}
+                      disabled={pausingBot || conversationDetails?.status === 'transferred'}
+                    >
+                      {pausingBot ? 'Processando...' :
+                        conversationDetails?.status === 'paused' ? 'Retomar Bot' : 'Pausar Bot'}
                     </Button>
                   </div>
                 )}
