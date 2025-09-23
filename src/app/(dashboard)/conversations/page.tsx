@@ -721,8 +721,6 @@ export default function ConversationsPage() {
       })
 
       if (response.ok) {
-        const data = await response.json()
-
         // Atualizar conversa na lista
         setConversations(prev => prev.map(conv =>
           conv._id === selectedConversation
@@ -743,12 +741,7 @@ export default function ConversationsPage() {
         setTransferReason('')
         setSelectedAgent('')
 
-        // Determinar mensagem baseada na atribuição
-        const agentName = selectedAgent ?
-          agents.find(a => a._id === selectedAgent)?.name || 'agente selecionado' :
-          'fila de atendimento'
-
-        alert(`Conversa transferida para ${agentName} com sucesso!`)
+        // Transferência realizada com sucesso - modal será fechado automaticamente
       } else {
         const error = await response.json()
         alert('Erro ao transferir: ' + error.error)
