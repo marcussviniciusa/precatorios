@@ -5,6 +5,11 @@ import Lead from '@/models/Lead'
 import User from '@/models/User'
 import { getTokenFromRequest, verifyToken } from '@/lib/auth'
 
+// Ensure models are registered
+import '@/models/Lead'
+import '@/models/Conversation'
+import '@/models/User'
+
 interface QueueItem {
   _id: string
   conversationId: string
@@ -67,9 +72,8 @@ export async function GET(request: NextRequest) {
       query['metadata.assignedAgentId'] = user.email
     }
 
-    // Buscar conversas em fila
+    // Buscar conversas em fila (sem populate para evitar erro de schema)
     const conversations = await Conversation.find(query)
-      .populate('leadId')
       .sort({
         'metadata.priority': -1,  // High priority first
         'metadata.transferredAt': 1  // Oldest first (FIFO within priority)
@@ -82,7 +86,9 @@ export async function GET(request: NextRequest) {
     for (const conv of conversations) {
       if (!conv.leadId) continue
 
-      const lead = conv.leadId as any
+      // Buscar lead separadamente para evitar problemas de populate
+      const lead = await Lead.findById(conv.leadId)
+      if (!lead) continue
       const transferredAt = conv.metadata?.transferredAt || conv.updatedAt
       const now = new Date()
       const waitingTime = Math.floor((now.getTime() - new Date(transferredAt).getTime()) / 1000 / 60) // em minutos
