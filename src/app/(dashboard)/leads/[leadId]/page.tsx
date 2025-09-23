@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -19,7 +19,11 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  RefreshCw
+  RefreshCw,
+  MessageSquare,
+  File,
+  Play,
+  Download
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { Lead, LeadSummary, AILog, TransferLog, ScoreLog } from '@/types'
@@ -48,6 +52,7 @@ interface LeadDetails {
 export default function LeadDetailsPage() {
   const params = useParams()
   const router = useRouter()
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const leadId = params?.leadId as string
 
   const [details, setDetails] = useState<LeadDetails | null>(null)
@@ -55,11 +60,7 @@ export default function LeadDetailsPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
 
-  useEffect(() => {
-    fetchLeadDetails()
-  }, [leadId])
-
-  const fetchLeadDetails = async () => {
+  const fetchLeadDetails = useCallback(async () => {
     try {
       const response = await fetch(`/api/leads/${leadId}/details`)
       if (response.ok) {
@@ -80,7 +81,11 @@ export default function LeadDetailsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [leadId, router])
+
+  useEffect(() => {
+    fetchLeadDetails()
+  }, [fetchLeadDetails])
 
   const generateSummary = async () => {
     setIsGeneratingSummary(true)
@@ -98,6 +103,13 @@ export default function LeadDetailsPage() {
       setIsGeneratingSummary(false)
     }
   }
+
+  // Auto-scroll para o final das mensagens quando o componente carregar
+  useEffect(() => {
+    if (details?.conversation?.messages?.length && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [details?.conversation?.messages])
 
   const getClassificationColor = (classification: string) => {
     const colors: Record<string, string> = {
@@ -329,6 +341,165 @@ export default function LeadDetailsPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Histórico de Conversas */}
+          {details.conversation && details.conversation.messages && details.conversation.messages.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Histórico de Conversas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-96 overflow-y-auto bg-gray-50 rounded-lg p-4 space-y-3">
+                  {details.conversation.messages.map((message: any, index: number) => (
+                    <div key={message._id || index} className={`flex ${
+                      message.sender === 'user' ? 'justify-start' : 'justify-end'
+                    }`}>
+                      <div className={`max-w-[80%] p-3 rounded-lg ${
+                        message.sender === 'user'
+                          ? 'bg-white shadow-sm border border-gray-200'
+                          : message.sender === 'bot'
+                          ? 'bg-blue-100 text-blue-900'
+                          : 'bg-primary text-white'
+                      }`}>
+                        {/* Renderização por tipo de mensagem */}
+                        {message.type === 'text' ? (
+                          <p className="text-sm leading-5">{message.content}</p>
+                        ) : message.type === 'image' && message.metadata?.mediaUrl ? (
+                          <div className="space-y-2">
+                            <img
+                              src={message.metadata.mediaUrl}
+                              alt="Imagem"
+                              className="rounded-lg max-w-full h-auto cursor-pointer max-h-48 object-cover"
+                              onClick={() => window.open(message.metadata?.mediaUrl, '_blank')}
+                            />
+                            {message.content !== '[Imagem enviada]' && (
+                              <p className="text-sm">{message.content}</p>
+                            )}
+                          </div>
+                        ) : message.type === 'document' ? (
+                          <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded">
+                            <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center">
+                              <File className="w-4 h-4 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {message.metadata?.fileName || 'Documento'}
+                              </p>
+                              <p className="text-xs text-gray-500">Documento</p>
+                            </div>
+                            {message.metadata?.mediaUrl && (
+                              <button
+                                onClick={() => window.open(message.metadata.mediaUrl, '_blank')}
+                                className="text-blue-500 hover:text-blue-700 p-1 rounded"
+                                title="Abrir documento"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        ) : message.type === 'audio' ? (
+                          <div className="flex items-center space-x-3 p-2 bg-gray-100 rounded-lg max-w-[250px]">
+                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                              <Play className="w-4 h-4 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-700">Áudio</p>
+                              {message.metadata?.transcription && (
+                                <p className="text-xs text-gray-600 mt-1 italic">
+                                  &quot;{message.metadata.transcription.substring(0, 50)}...&quot;
+                                </p>
+                              )}
+                            </div>
+                            {message.metadata?.mediaUrl && (
+                              <button
+                                onClick={() => window.open(message.metadata.mediaUrl, '_blank')}
+                                className="text-blue-500 hover:text-blue-700 p-1 rounded"
+                                title="Reproduzir áudio"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        ) : message.type === 'video' ? (
+                          <div className="space-y-2">
+                            {message.metadata?.mediaUrl ? (
+                              <video
+                                controls
+                                className="rounded-lg max-w-full h-auto max-h-48"
+                              >
+                                <source src={message.metadata.mediaUrl} type="video/mp4" />
+                                Seu navegador não suporta vídeo.
+                              </video>
+                            ) : (
+                              <div className="flex items-center space-x-2 p-2 bg-gray-100 rounded">
+                                <div className="w-8 h-8 bg-purple-500 rounded flex items-center justify-center">
+                                  <Play className="w-4 h-4 text-white" />
+                                </div>
+                                <p className="text-sm">Vídeo enviado</p>
+                              </div>
+                            )}
+                            {message.content !== '[Vídeo enviado]' && (
+                              <p className="text-sm">{message.content}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm">{message.content}</p>
+                        )}
+
+                        {/* Informações da mensagem */}
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center space-x-2">
+                            {message.sender === 'bot' && (
+                              <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
+                                Bot
+                              </span>
+                            )}
+                            {message.sender === 'agent' && (
+                              <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">
+                                {message.senderName || 'Agente'}
+                              </span>
+                            )}
+                            <p className={`text-xs ${
+                              message.sender === 'user'
+                                ? 'text-gray-500'
+                                : message.sender === 'bot'
+                                ? 'text-blue-600'
+                                : 'opacity-80'
+                            }`}>
+                              {message.timestamp ? new Date(message.timestamp).toLocaleString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              }) : 'Agora'}
+                            </p>
+                          </div>
+                          {message.sender === 'user' && (
+                            <span className={`text-xs ${
+                              message.read ? 'text-blue-500' : 'text-gray-400'
+                            }`}>
+                              {message.read ? '✓✓' : '✓'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Estatísticas da conversa */}
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 text-sm text-gray-600">
+                  <span>Total: {details.conversation.messages.length} mensagens</span>
+                  <span>Status: {details.conversation.status === 'active' ? 'Ativa' : 'Pausada'}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Resumo Gerado pela IA */}
           {summary && (

@@ -93,8 +93,9 @@ export async function GET(
       conversation: conversation ? {
         _id: conversation._id,
         status: conversation.status,
-        messagesCount: conversation.messages.length,
-        lastMessage: conversation.messages[conversation.messages.length - 1],
+        messages: conversation.messages || [], // Incluir mensagens completas
+        messagesCount: conversation.messages?.length || 0,
+        lastMessage: conversation.messages?.[conversation.messages.length - 1],
         botActive: conversation.botActive
       } : null,
       activities,
