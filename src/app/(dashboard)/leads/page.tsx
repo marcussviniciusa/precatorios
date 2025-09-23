@@ -59,10 +59,15 @@ export default function LeadsPage() {
   const [paginatedLeads, setPaginatedLeads] = useState<Lead[]>([])
   const [totalPages, setTotalPages] = useState(0)
 
-  // Função para calcular número do lead baseado na ordem de chegada e paginação
-  const getLeadNumber = (_lead: Lead, index: number) => {
-    // Calcular número global baseado na página atual e índice
-    return (currentPage - 1) * itemsPerPage + index + 1
+  // Função para calcular número do lead baseado na ordem de criação global
+  const getLeadNumber = (lead: Lead) => {
+    // Ordenar todos os leads originais por data de criação (mais antigo primeiro)
+    const sortedByCreation = [...leads].sort((a, b) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
+
+    // Retornar posição do lead na lista ordenada + 1
+    return sortedByCreation.findIndex(l => l._id === lead._id) + 1
   }
 
   useEffect(() => {
@@ -325,11 +330,11 @@ export default function LeadsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                  {paginatedLeads.map((lead, index) => (
+                  {paginatedLeads.map((lead) => (
                     <tr key={lead._id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <span className="font-medium text-primary text-sm">
-                          #{getLeadNumber(lead, index)}
+                          #{getLeadNumber(lead)}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -426,12 +431,12 @@ export default function LeadsPage() {
 
               {/* Versão Mobile - Cards */}
               <div className="lg:hidden space-y-4">
-                {paginatedLeads.map((lead, index) => (
+                {paginatedLeads.map((lead) => (
                   <div key={lead._id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
-                          <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">#{getLeadNumber(lead, index)}</span>
+                          <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">#{getLeadNumber(lead)}</span>
                           <h3 className="font-medium text-gray-900 text-lg">{lead.name}</h3>
                         </div>
                         <div className="text-sm text-gray-600 mt-1">
