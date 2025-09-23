@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Estatísticas da fila
+    // Estatísticas baseadas no filtro ativo
     const stats = {
       total: queue.length,
       waiting: queue.filter(q => !q.assignedAgent).length,
@@ -126,9 +126,41 @@ export async function GET(request: NextRequest) {
         : 0
     }
 
+    // Para filtros específicos, também calcular stats globais para os contadores dos botões
+    let globalStats = stats
+    if (assignedOnlyFalse || assignedOnly || myQueue) {
+      // Buscar estatísticas globais (todas as transferidas) para os contadores dos filtros
+      const allTransferredQuery = { status: 'transferred' }
+      const allConversations = await Conversation.find(allTransferredQuery)
+
+      const allQueue = []
+      for (const conv of allConversations) {
+        if (!conv.leadId) continue
+        const lead = await Lead.findById(conv.leadId)
+        if (!lead) continue
+
+        allQueue.push({
+          assignedAgent: conv.assignedAgent,
+          priority: conv.metadata?.priority || 'medium'
+        })
+      }
+
+      globalStats = {
+        total: allQueue.length,
+        waiting: allQueue.filter(q => !q.assignedAgent).length,
+        assigned: allQueue.filter(q => q.assignedAgent).length,
+        highPriority: allQueue.filter(q => q.priority === 'high').length,
+        mediumPriority: allQueue.filter(q => q.priority === 'medium').length,
+        lowPriority: allQueue.filter(q => q.priority === 'low').length,
+        averageWaitTime: stats.averageWaitTime, // Manter do filtro ativo
+        longestWaitTime: stats.longestWaitTime   // Manter do filtro ativo
+      }
+    }
+
     return NextResponse.json({
       queue,
-      stats
+      stats,        // Estatísticas do filtro ativo (para os cards principais)
+      globalStats   // Estatísticas globais (para os contadores dos botões de filtro)
     })
 
   } catch (error) {

@@ -52,6 +52,7 @@ interface QueueStats {
 export default function QueuePage() {
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [stats, setStats] = useState<QueueStats | null>(null)
+  const [globalStats, setGlobalStats] = useState<QueueStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'waiting' | 'assigned' | 'mine'>('all')
   const [refreshing, setRefreshing] = useState(false)
@@ -74,6 +75,7 @@ export default function QueuePage() {
         const data = await response.json()
         setQueue(data.queue)
         setStats(data.stats)
+        setGlobalStats(data.globalStats || data.stats) // Fallback para stats se globalStats não existir
       }
     } catch (error) {
       console.error('Error fetching queue:', error)
@@ -287,21 +289,21 @@ export default function QueuePage() {
           size="sm"
           onClick={() => setFilter('all')}
         >
-          Todas ({stats?.total || 0})
+          Todas ({globalStats?.total || 0})
         </Button>
         <Button
           variant={filter === 'waiting' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setFilter('waiting')}
         >
-          Aguardando ({stats?.waiting || 0})
+          Aguardando ({globalStats?.waiting || 0})
         </Button>
         <Button
           variant={filter === 'assigned' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setFilter('assigned')}
         >
-          Atribuídas ({stats?.assigned || 0})
+          Atribuídas ({globalStats?.assigned || 0})
         </Button>
         <Button
           variant={filter === 'mine' ? 'default' : 'outline'}
