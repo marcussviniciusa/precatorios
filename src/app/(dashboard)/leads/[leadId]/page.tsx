@@ -23,7 +23,8 @@ import {
   MessageSquare,
   File,
   Play,
-  Download
+  Download,
+  ExternalLink
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { Lead, LeadSummary, AILog, TransferLog, ScoreLog } from '@/types'
@@ -776,7 +777,44 @@ export default function LeadDetailsPage() {
         <TabsContent value="transfers" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Histórico de Transferências</CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle>Histórico de Transferências</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/integrations/bitrix', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          leadId: leadId,
+                          transferLogId: logs.transfer[0]?._id // Usar primeiro log como teste
+                        })
+                      })
+
+                      const result = await response.json()
+                      if (result.success) {
+                        alert(`Lead enviado para Bitrix! ID: ${result.bitrixLeadId}`)
+                        // Refresh dados
+                        fetchLeadDetails()
+                      } else {
+                        alert(`Erro: ${result.message}`)
+                      }
+                    } catch (error) {
+                      alert('Erro ao enviar para Bitrix')
+                      console.error(error)
+                    }
+                  }}
+                  className="text-blue-600 hover:text-blue-700"
+                  disabled={!logs.transfer.length}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Testar Bitrix
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {logs.transfer.length > 0 ? (
@@ -813,6 +851,35 @@ export default function LeadDetailsPage() {
                             <div>
                               <span className="text-sm font-semibold">Notas:</span>
                               <p className="text-sm text-gray-700">{log.notes}</p>
+                            </div>
+                          )}
+
+                          {/* Informações da integração Bitrix */}
+                          {log.metadata?.bitrixSent && (
+                            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  <span className="text-sm font-semibold text-blue-900">Integração Bitrix</span>
+                                </div>
+                                <Badge className="bg-blue-100 text-blue-800">
+                                  Lead #{log.metadata.bitrixLeadId}
+                                </Badge>
+                              </div>
+                              <div className="space-y-1 text-xs text-blue-700">
+                                <div>Enviado para: Bitrix24 CRM</div>
+                                <div>Data: {formatDate(log.metadata.bitrixSentAt)}</div>
+                                <div>Por: {log.metadata.bitrixSentBy}</div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Indicador de primeira transferência IA */}
+                          {log.metadata?.isFirstAITransfer && (
+                            <div className="mt-2">
+                              <Badge className="bg-yellow-100 text-yellow-800">
+                                Primeira transferência IA → Humano
+                              </Badge>
                             </div>
                           )}
                         </div>

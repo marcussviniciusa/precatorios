@@ -571,11 +571,23 @@ async function processMessageWithAI(
         console.log(`AI decided to transfer: ${transferDecision.reason}`)
         await Conversation.findByIdAndUpdate(conversation._id, {
           status: 'transferred',
-          'metadata.transferReason': transferDecision.reason
+          'metadata.transferReason': transferDecision.reason,
+          'metadata.transferredAt': new Date(),
+          'metadata.priority': 'medium' // Pode ser melhorado com lógica de prioridade baseada no score
         })
 
+        // Verificar se é a primeira transferência IA -> Humano para este lead
+        const previousTransfers = await TransferLog.find({
+          leadId: lead._id.toString(),
+          fromStatus: 'active',
+          toStatus: 'transferred',
+          triggeredBy: 'ai'
+        })
+
+        const isFirstAITransfer = previousTransfers.length === 0
+
         // Log transfer
-        await TransferLog.create({
+        const transferLog = await TransferLog.create({
           leadId: lead._id.toString(),
           fromStatus: 'active',
           toStatus: 'transferred',
@@ -584,9 +596,35 @@ async function processMessageWithAI(
           metadata: {
             score: lead.score,
             classification: lead.classification,
-            conversationId: conversation._id.toString()
+            conversationId: conversation._id.toString(),
+            isFirstAITransfer,
+            bitrixSent: false // Flag para controle de duplicação
           }
         })
+
+        // 🚀 TRIGGER: Enviar para Bitrix na primeira transferência IA -> Humano
+        if (isFirstAITransfer) {
+          console.log(`First AI transfer for lead ${lead._id} - triggering Bitrix integration`)
+
+          try {
+            // Chamar integração Bitrix de forma assíncrona (não bloquear o webhook)
+            fetch('/api/integrations/bitrix', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.INTERNAL_API_TOKEN || ''}`
+              },
+              body: JSON.stringify({
+                leadId: lead._id.toString(),
+                transferLogId: transferLog._id.toString()
+              })
+            }).catch(error => {
+              console.error('Bitrix integration async call failed:', error)
+            })
+          } catch (error) {
+            console.error('Error triggering Bitrix integration:', error)
+          }
+        }
 
         return
       }
