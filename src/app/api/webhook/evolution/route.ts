@@ -607,22 +607,67 @@ async function processMessageWithAI(
           console.log(`First AI transfer for lead ${lead._id} - triggering Bitrix integration`)
 
           try {
-            // Chamar integração Bitrix de forma assíncrona (não bloquear o webhook)
-            fetch('/api/integrations/bitrix', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.INTERNAL_API_TOKEN || ''}`
-              },
-              body: JSON.stringify({
-                leadId: lead._id.toString(),
-                transferLogId: transferLog._id.toString()
+            // Verificar se webhook Bitrix está configurado
+            const bitrixWebhookUrl = process.env.BITRIX_WEBHOOK_URL
+            const bitrixEnabled = process.env.BITRIX_INTEGRATION_ENABLED === 'true'
+
+            if (bitrixWebhookUrl && bitrixEnabled) {
+              // Extrair primeiro nome e sobrenome
+              const nameParts = lead.name?.split(' ') || ['']
+              const firstName = nameParts[0] || ''
+              const lastName = nameParts.slice(1).join(' ') || ''
+
+              // Preparar dados para Bitrix Deal
+              const bitrixData = {
+                fields: {
+                  TITLE: `Lead WhatsApp: ${lead.name || 'Sem nome'}`,
+                  STAGE_ID: "C19:NEW",
+                  CATEGORY_ID: 19,
+                  ASSIGNED_BY_ID: parseInt(process.env.BITRIX_DEFAULT_USER_ID || '1218'),
+                  OPPORTUNITY: lead.precatorioValue || 0,
+                  CURRENCY_ID: "BRL",
+                  // Dados adicionais do lead
+                  COMMENTS: `Resumo da IA: ${transferLog.summary || 'Sem resumo disponível'}\n\nTelefone: ${lead.phone}\nStatus: ${lead.hasPrecatorio ? 'Possui precatório' : 'Não possui precatório'}\nTipo: ${lead.precatorioType || 'Não informado'}\nElegível: ${lead.isEligible ? 'Sim' : 'Não'}\nUrgência: ${lead.urgency || 'Não informado'}\nClassificação: ${lead.classification || 'Não classificado'}`
+                }
+              }
+
+              // Chamar webhook Bitrix diretamente
+              fetch(`${bitrixWebhookUrl}/crm.deal.add`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(bitrixData)
               })
-            }).catch(error => {
-              console.error('Bitrix integration async call failed:', error)
-            })
+              .then(async (response) => {
+                if (response.ok) {
+                  const result = await response.json()
+                  console.log('Bitrix deal created successfully:', result)
+
+                  // Atualizar TransferLog com sucesso
+                  await TransferLog.findByIdAndUpdate(transferLog._id, {
+                    bitrixSent: true,
+                    bitrixDealId: result.result?.toString() || null,
+                    bitrixSentAt: new Date()
+                  })
+                } else {
+                  console.error('Bitrix webhook failed:', response.status, response.statusText)
+                  await TransferLog.findByIdAndUpdate(transferLog._id, {
+                    bitrixSent: false,
+                    bitrixError: `HTTP ${response.status}: ${response.statusText}`
+                  })
+                }
+              })
+              .catch(async (error) => {
+                console.error('Bitrix integration error:', error)
+                await TransferLog.findByIdAndUpdate(transferLog._id, {
+                  bitrixSent: false,
+                  bitrixError: error.message
+                })
+              })
+            }
           } catch (error) {
-            console.error('Error triggering Bitrix integration:', error)
+            console.error('Error in Bitrix webhook integration:', error)
           }
         }
 
