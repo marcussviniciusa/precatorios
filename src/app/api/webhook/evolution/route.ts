@@ -704,13 +704,22 @@ async function processMessageWithAI(
       return
     }
     
+    // Garantir que timestamp do bot seja posterior à última mensagem do usuário
+    const lastUserMessage = conversation.messages
+      .filter((msg: any) => msg.sender === 'user')
+      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0]
+
+    const botTimestamp = lastUserMessage
+      ? new Date(Math.max(new Date(lastUserMessage.timestamp).getTime() + 1000, Date.now()))
+      : new Date()
+
     // Criar objeto da mensagem do bot
     const botMessage = {
       conversationId: conversation._id,
       type: 'text',
       content: response,
       sender: 'bot',
-      timestamp: new Date(),
+      timestamp: botTimestamp,
       read: true
     }
 

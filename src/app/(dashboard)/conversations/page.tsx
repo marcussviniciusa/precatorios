@@ -1083,8 +1083,12 @@ export default function ConversationsPage() {
                           </div>
                         </div>
                       ) : (
-                        conversationDetails?.messages?.map((message, index) => (
-                          <div key={message._id || index} className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'}`}>
+                        conversationDetails?.messages?.map((message, index) => {
+                          const prevMessage = conversationDetails?.messages?.[index - 1]
+                          const isNewSender = !prevMessage || prevMessage.sender !== message.sender
+
+                          return (
+                          <div key={message._id || index} className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'} ${isNewSender ? 'mt-4' : ''}`}>
                             <div className={`max-w-[85%] p-3 rounded-lg ${
                               message.sender === 'user'
                                 ? 'bg-white shadow-sm'
@@ -1152,7 +1156,8 @@ export default function ConversationsPage() {
                               </div>
                             </div>
                           </div>
-                        ))
+                          )
+                        })
                       )}
                       <div ref={messagesEndRef} />
                     </div>
@@ -1477,7 +1482,7 @@ export default function ConversationsPage() {
             <CardContent className="flex-1 flex flex-col overflow-hidden p-0 px-3">
               {selectedConversation ? (
                 <div className="flex flex-col h-full">
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-lg mb-2">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 rounded-lg mb-2">
                     {messagesLoading ? (
                       <div className="flex items-center justify-center h-full">
                         <div className="text-sm text-gray-500">Carregando mensagens...</div>
@@ -1490,8 +1495,12 @@ export default function ConversationsPage() {
                         </div>
                       </div>
                     ) : (
-                      conversationDetails?.messages?.map((message, index) => (
-                        <div key={message._id || index} className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'}`}>
+                      conversationDetails?.messages?.map((message, index) => {
+                        const prevMessage = conversationDetails?.messages?.[index - 1]
+                        const isNewSender = !prevMessage || prevMessage.sender !== message.sender
+
+                        return (
+                        <div key={message._id || index} className={`flex ${message.sender === 'user' ? 'justify-start' : 'justify-end'} ${isNewSender ? 'mt-4' : ''}`}>
                           <div className={`max-w-xs p-3 rounded-lg ${
                             message.sender === 'user'
                               ? 'bg-white shadow-sm'
@@ -1629,7 +1638,8 @@ export default function ConversationsPage() {
                             )}
                           </div>
                         </div>
-                      ))
+                        )
+                      })
                     )}
                     <div ref={messagesEndRef} />
                   </div>
