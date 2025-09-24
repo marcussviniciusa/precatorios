@@ -10,7 +10,6 @@ import {
   User,
   Clock,
   Send,
-  Phone,
   MoreVertical,
   RefreshCw,
   Paperclip,
@@ -985,16 +984,6 @@ export default function ConversationsPage() {
               )}
             </h1>
             <p className="text-sm sm:text-base text-gray-600">Gerencie todas as conversas do WhatsApp</p>
-          </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" className="hidden sm:flex">
-              <Phone className="w-4 h-4 mr-2" />
-              Ligar
-            </Button>
-            <Button className="hidden sm:flex">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Nova Conversa
-            </Button>
           </div>
         </div>
       )}
