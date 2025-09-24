@@ -971,22 +971,7 @@ export default function ConversationsPage() {
             )}
           </div>
         </div>
-      ) : (
-        /* Header Desktop/Mobile Lista */
-        <div className="flex-shrink-0 mb-4 sm:mb-6 w-fit">
-          <div className="w-fit">
-            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 flex items-center space-x-2 w-fit">
-              <span>Conversas</span>
-              {isConnected ? (
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Conectado em tempo real" />
-              ) : (
-                <div className="w-2 h-2 bg-red-500 rounded-full" title="Desconectado do tempo real" />
-              )}
-            </h1>
-            <p className="text-sm sm:text-base text-gray-600 w-fit">Gerencie todas as conversas do WhatsApp</p>
-          </div>
-        </div>
-      )}
+      ) : null}
 
       {/* Layout responsivo principal */}
       {isMobile ? (
@@ -1385,7 +1370,7 @@ export default function ConversationsPage() {
 
           {/* Chat desktop - mantém o original completo */}
           <Card className="xl:col-span-2 flex flex-col overflow-hidden">
-            <CardHeader className="flex-shrink-0">
+            <CardHeader className="flex-shrink-0 p-0 pt-2 px-3">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex flex-col">
                   {selectedConversation ? (
@@ -1500,10 +1485,10 @@ export default function ConversationsPage() {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col overflow-hidden">
+            <CardContent className="flex-1 flex flex-col overflow-hidden p-0 px-3">
               {selectedConversation ? (
                 <div className="flex flex-col h-full">
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-lg mb-4">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-lg mb-2">
                     {messagesLoading ? (
                       <div className="flex items-center justify-center h-full">
                         <div className="text-sm text-gray-500">Carregando mensagens...</div>
@@ -1660,7 +1645,7 @@ export default function ConversationsPage() {
                     <div ref={messagesEndRef} />
                   </div>
 
-                  <div className="flex-shrink-0 space-y-2">
+                  <div className="flex-shrink-0 space-y-2 pb-3">
                     {/* Aviso de erro de instância */}
                     {instanceError && !instanceInfo && (
                       <div className="flex items-center space-x-2 p-2 bg-red-50 border border-red-200 rounded-lg text-red-700">
