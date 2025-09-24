@@ -662,16 +662,7 @@ export default function ConversationsPage() {
         })
 
         if (response.ok) {
-          const data = await response.json()
-
-          // Adicionar nova mensagem à lista
-          if (conversationDetails) {
-            setConversationDetails(prev => prev ? {
-              ...prev,
-              messages: [...prev.messages, data.message]
-            } : null)
-          }
-
+          // Não adicionar mensagem aqui - WebSocket já vai fazer isso via handleNewMessage
           setNewMessage('')
 
           // Atualizar lista de conversas
@@ -838,8 +829,6 @@ export default function ConversationsPage() {
       })
 
       if (response.ok) {
-        const data = await response.json()
-
         // Atualizar conversa na lista
         const newStatus = action === 'pause' ? 'paused' : 'active'
         setConversations(prev => prev.map(conv =>
