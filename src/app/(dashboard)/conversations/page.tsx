@@ -973,9 +973,9 @@ export default function ConversationsPage() {
         </div>
       ) : (
         /* Header Desktop/Mobile Lista */
-        <div className="flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 sm:mb-6">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 flex items-center space-x-2">
+        <div className="flex-shrink-0 mb-4 sm:mb-6 w-fit">
+          <div className="w-fit">
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 flex items-center space-x-2 w-fit">
               <span>Conversas</span>
               {isConnected ? (
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Conectado em tempo real" />
@@ -983,7 +983,7 @@ export default function ConversationsPage() {
                 <div className="w-2 h-2 bg-red-500 rounded-full" title="Desconectado do tempo real" />
               )}
             </h1>
-            <p className="text-sm sm:text-base text-gray-600">Gerencie todas as conversas do WhatsApp</p>
+            <p className="text-sm sm:text-base text-gray-600 w-fit">Gerencie todas as conversas do WhatsApp</p>
           </div>
         </div>
       )}
