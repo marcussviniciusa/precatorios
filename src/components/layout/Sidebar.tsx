@@ -20,6 +20,7 @@ import {
   UserCog,
   LogOut,
   Clock,
+  GitMerge,
 } from 'lucide-react'
 
 // Todas as rotas do sistema
@@ -88,6 +89,12 @@ const allNavigation = [
     name: 'IA Config',
     href: '/config/ai',
     icon: Brain,
+    requireAdmin: true
+  },
+  {
+    name: 'Bitrix CRM',
+    href: '/config/bitrix',
+    icon: GitMerge,
     requireAdmin: true
   },
   {
