@@ -863,7 +863,7 @@ export default function LeadDetailsPage() {
                                   <span className="text-sm font-semibold text-blue-900">Integração Bitrix</span>
                                 </div>
                                 <Badge className="bg-blue-100 text-blue-800">
-                                  Lead #{log.metadata.bitrixLeadId}
+                                  Deal #{log.metadata.bitrixDealId}
                                 </Badge>
                               </div>
                               <div className="space-y-1 text-xs text-blue-700">

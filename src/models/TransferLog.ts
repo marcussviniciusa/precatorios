@@ -33,7 +33,13 @@ const TransferLogSchema = new Schema<TransferLog>({
   metadata: {
     score: Number,
     classification: String,
-    conversationId: String
+    conversationId: String,
+    isFirstAITransfer: Boolean,
+    bitrixSent: Boolean,
+    bitrixDealId: String,
+    bitrixSentAt: Date,
+    bitrixSentBy: String,
+    bitrixError: String
   }
 })
 

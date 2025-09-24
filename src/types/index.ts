@@ -258,6 +258,12 @@ export interface TransferLog {
     score?: number
     classification?: string
     conversationId?: string
+    isFirstAITransfer?: boolean
+    bitrixSent?: boolean
+    bitrixDealId?: string
+    bitrixSentAt?: Date
+    bitrixSentBy?: string
+    bitrixError?: string
   }
 }
 

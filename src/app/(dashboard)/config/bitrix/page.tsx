@@ -340,7 +340,7 @@ export default function BitrixConfigPage() {
               <h3 className="font-semibold mb-2">1. Criar Webhook no Bitrix24</h3>
               <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
                 <li>Acesse seu Bitrix24 → Aplicações → Webhooks</li>
-                <li>Clique em "Webhook de entrada"</li>
+                <li>Clique em &quot;Webhook de entrada&quot;</li>
                 <li>Selecione as permissões: CRM (crm)</li>
                 <li>Copie a URL gerada</li>
               </ul>
@@ -361,7 +361,7 @@ export default function BitrixConfigPage() {
                 <li>Integração é disparada na primeira transferência IA → Humano</li>
                 <li>Dados do lead, resumo IA e informações do precatório são enviados</li>
                 <li>Lead é criado automaticamente no Bitrix24</li>
-                <li>Log da integração fica visível na aba "Transferências"</li>
+                <li>Log da integração fica visível na aba &quot;Transferências&quot;</li>
               </ul>
             </div>
           </div>
