@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -373,6 +374,25 @@ export default function ConversationsPage() {
   const [loadingAgents, setLoadingAgents] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Next.js 14 hooks para URL parameters
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  // Função para atualizar URL sem recarregar página
+  const updateURLWithConversation = useCallback((conversationId: string | null) => {
+    const params = new URLSearchParams(searchParams?.toString() || '')
+
+    if (conversationId) {
+      params.set('selected', conversationId)
+    } else {
+      params.delete('selected')
+    }
+
+    const newURL = pathname + (params.toString() ? '?' + params.toString() : '')
+    router.replace(newURL, { scroll: false })
+  }, [searchParams, router, pathname])
+
   // Stable callback functions
   const handleNewMessage = useCallback((data: { conversationId: string; message: any }) => {
     // Update conversation details if it's the currently selected conversation
@@ -479,6 +499,40 @@ export default function ConversationsPage() {
 
     fetchConversations()
   }, [])
+
+  // 🔥 NOVA LÓGICA: Auto-seleção baseada na URL
+  useEffect(() => {
+    const selectedParam = searchParams?.get('selected')
+
+    // Só processa se há parâmetro e conversas carregadas
+    if (selectedParam && conversations.length > 0 && !isLoading) {
+      // Verifica se a conversa existe
+      const conversationExists = conversations.some(conv => conv._id === selectedParam)
+
+      if (conversationExists) {
+        // Se não está selecionada ou é diferente da atual
+        if (selectedConversation !== selectedParam) {
+          console.log('Auto-selecting conversation from URL:', selectedParam)
+          handleConversationSelect(selectedParam, false) // false = não atualizar URL
+        }
+      } else {
+        // Conversa não existe, limpar parâmetro
+        console.log('Conversation not found, clearing URL parameter')
+        updateURLWithConversation(null)
+      }
+    }
+    // Se não há parâmetro mas há seleção, limpar seleção
+    else if (!selectedParam && selectedConversation) {
+      console.log('No URL parameter, clearing selection')
+      setSelectedConversation(null)
+      setConversationDetails(null)
+      setInstanceInfo(null)
+      setInstanceError(null)
+      if (isMobile) {
+        setShowConversationList(true)
+      }
+    }
+  }, [searchParams, conversations, isLoading, selectedConversation])
 
   // Auto-scroll para a última mensagem
   const scrollToBottom = () => {
@@ -636,10 +690,10 @@ export default function ConversationsPage() {
     }
   }
 
-  // Lidar com seleção de conversa
-  const handleConversationSelect = (conversationId: string) => {
+  // 🔥 FUNÇÃO ATUALIZADA: Lidar com seleção de conversa
+  const handleConversationSelect = (conversationId: string, updateURL: boolean = true) => {
     // Leave previous conversation room
-    if (selectedConversation) {
+    if (selectedConversation && selectedConversation !== conversationId) {
       leaveConversation(selectedConversation)
     }
 
@@ -649,13 +703,18 @@ export default function ConversationsPage() {
     // Join new conversation room for real-time updates
     joinConversation(conversationId)
 
+    // Atualizar URL apenas se solicitado (evita loop)
+    if (updateURL) {
+      updateURLWithConversation(conversationId)
+    }
+
     // Em mobile, esconder lista de conversas quando selecionar uma
     if (isMobile) {
       setShowConversationList(false)
     }
   }
 
-  // Voltar para lista de conversas (mobile)
+  // 🔥 FUNÇÃO ATUALIZADA: Voltar para lista de conversas (mobile)
   const handleBackToConversations = () => {
     if (selectedConversation) {
       leaveConversation(selectedConversation)
@@ -665,6 +724,9 @@ export default function ConversationsPage() {
     setInstanceInfo(null)
     setInstanceError(null)
     setShowConversationList(true)
+
+    // Limpar parâmetro da URL
+    updateURLWithConversation(null)
   }
 
   // Função para buscar agentes disponíveis

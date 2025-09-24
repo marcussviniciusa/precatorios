@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -58,6 +59,9 @@ export default function QueuePage() {
   const [filter, setFilter] = useState<'all' | 'waiting' | 'assigned' | 'mine'>('all')
   const [refreshing, setRefreshing] = useState(false)
   const [takingNext, setTakingNext] = useState(false)
+
+  // Next.js router hook
+  const router = useRouter()
 
   // Fetch queue data
   const fetchQueue = async () => {
@@ -392,7 +396,7 @@ export default function QueuePage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.location.href = `/conversations?selected=${item.conversationId}`}
+                        onClick={() => router.push(`/conversations?selected=${item.conversationId}`)}
                       >
                         <MessageSquare className="w-4 h-4" />
                       </Button>
