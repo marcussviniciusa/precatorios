@@ -222,6 +222,9 @@ export async function POST(request: NextRequest) {
                     transcription = extractedText
                     messageText = extractedText // ✅ IA recebe transcrição!
                     console.log(`WhatsApp Official audio transcribed: ${extractedText.substring(0, 100)}...`)
+                  } else if (messageType === 'video') {
+                    // Para vídeos, não mostrar texto extraído (apenas logs internos)
+                    console.log(`WhatsApp Official ${messageType} processed (no text shown to user)`)
                   } else {
                     // Para imagens e documentos, substituir o texto padrão ou adicionar ao caption existente
                     if (messageText === '[Imagem enviada]' ||
@@ -312,12 +315,14 @@ export async function POST(request: NextRequest) {
                         transcription = extractedText
                         // Para a IA, usar o texto transcrito
                         messageText = extractedText
+                      } else if (messageType === 'video') {
+                        // Para vídeos, não mostrar texto extraído (apenas manter mensagem original)
+                        console.log(`Video processed but no extracted text shown to user`)
                       } else {
                         // Para imagens e documentos, substituir o texto
-                        messageText = messageText === '[Imagem enviada]' || 
-                                     messageText === '[Vídeo enviado]' ||
-                                     messageText.startsWith('[Documento:') 
-                                     ? extractedText 
+                        messageText = messageText === '[Imagem enviada]' ||
+                                     messageText.startsWith('[Documento:')
+                                     ? extractedText
                                      : `${messageText}\n\n[Texto extraído]:\n${extractedText}`
                       }
                       

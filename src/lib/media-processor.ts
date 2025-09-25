@@ -237,13 +237,16 @@ class MediaProcessor {
     try {
       console.log(`Processing video for content analysis (${mimeType})`)
 
-      // Por enquanto, retorna uma descrição básica
+      // Por enquanto, não retorna nenhum texto extraído para vídeos
       // TODO: Implementar extração de frame + análise de imagem
       // TODO: Extrair áudio + transcrição
       // TODO: Gerar thumbnail
 
       const videoSizeMB = (videoBuffer.length / (1024 * 1024)).toFixed(2)
-      return `[Vídeo recebido - ${videoSizeMB}MB, formato: ${mimeType}]`
+      console.log(`Vídeo processado - ${videoSizeMB}MB, formato: ${mimeType}`)
+
+      // Retorna null para não mostrar "texto extraído"
+      return null
 
     } catch (error) {
       console.error('Error processing video:', error)
