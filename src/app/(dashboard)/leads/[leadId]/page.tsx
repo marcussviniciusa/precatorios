@@ -373,7 +373,8 @@ export default function LeadDetailsPage() {
                             <img
                               src={message.metadata.mediaUrl}
                               alt="Imagem"
-                              className="rounded-lg max-w-full h-auto cursor-pointer max-h-48 object-cover"
+                              className="rounded-lg max-w-full h-auto cursor-pointer"
+                              style={{ maxHeight: '300px' }}
                               onClick={() => window.open(message.metadata?.mediaUrl, '_blank')}
                             />
                             {message.content !== '[Imagem enviada]' && (

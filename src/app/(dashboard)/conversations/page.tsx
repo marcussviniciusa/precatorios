@@ -1105,6 +1105,7 @@ export default function ConversationsPage() {
                                     src={message.metadata.mediaUrl}
                                     alt="Imagem"
                                     className="rounded-lg max-w-full h-auto cursor-pointer"
+                                    style={{ maxHeight: '300px' }}
                                     onClick={() => window.open(message.metadata?.mediaUrl, '_blank')}
                                   />
                                   {message.content !== '[Imagem enviada]' && (
@@ -1515,6 +1516,7 @@ export default function ConversationsPage() {
                                   src={message.metadata.mediaUrl}
                                   alt="Imagem enviada"
                                   className="rounded-lg max-w-full h-auto cursor-pointer"
+                                  style={{ maxHeight: '300px' }}
                                   onClick={() => message.metadata?.mediaUrl && window.open(message.metadata.mediaUrl, '_blank')}
                                 />
                                 {message.content !== '[Imagem enviada]' && (
@@ -1590,7 +1592,7 @@ export default function ConversationsPage() {
                                   <video
                                     controls
                                     className="rounded-lg max-w-full h-auto"
-                                    style={{ maxHeight: '200px' }}
+                                    style={{ maxHeight: '300px' }}
                                   >
                                     <source src={message.metadata.mediaUrl} type="video/mp4" />
                                     Seu navegador não suporta vídeo.
