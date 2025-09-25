@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verificar se é mídia do WhatsApp Official API (tem base64 direto)
-        if ((messageType === 'audio' || messageType === 'image' || messageType === 'document') &&
+        if ((messageType === 'audio' || messageType === 'image' || messageType === 'document' || messageType === 'video') &&
             data.message?.base64 && !whatsappMediaUrl) {
           console.log(`Processing WhatsApp Official API ${messageType} from base64`)
 
@@ -174,6 +174,14 @@ export async function POST(request: NextRequest) {
                 fileName = `document_${message.key.id}.${fileExtension}`
                 folder = 'documents'
                 defaultMimetype = 'application/pdf'
+                break
+              case 'video':
+                const videoExtension = mimetype?.includes('mp4') ? 'mp4' :
+                                     mimetype?.includes('webm') ? 'webm' :
+                                     mimetype?.includes('3gpp') ? '3gp' : 'mp4'
+                fileName = `video_${message.key.id}.${videoExtension}`
+                folder = 'videos'
+                defaultMimetype = 'video/mp4'
                 break
               default:
                 fileName = `media_${message.key.id}.bin`

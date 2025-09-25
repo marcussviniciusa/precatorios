@@ -113,6 +113,9 @@ export const uploadBufferToMinio = async (
       else if (mimetype.includes('image/png')) fileExtension = 'png'
       else if (mimetype.includes('image/gif')) fileExtension = 'gif'
       else if (mimetype.includes('video/mp4')) fileExtension = 'mp4'
+      else if (mimetype.includes('video/webm')) fileExtension = 'webm'
+      else if (mimetype.includes('video/3gpp')) fileExtension = '3gp'
+      else if (mimetype.includes('video/quicktime')) fileExtension = 'mov'
       else if (mimetype.includes('application/pdf')) fileExtension = 'pdf'
     }
     

@@ -233,6 +233,24 @@ class MediaProcessor {
     }
   }
 
+  async processVideo(videoBuffer: Buffer, mimeType: string): Promise<string | null> {
+    try {
+      console.log(`Processing video for content analysis (${mimeType})`)
+
+      // Por enquanto, retorna uma descrição básica
+      // TODO: Implementar extração de frame + análise de imagem
+      // TODO: Extrair áudio + transcrição
+      // TODO: Gerar thumbnail
+
+      const videoSizeMB = (videoBuffer.length / (1024 * 1024)).toFixed(2)
+      return `[Vídeo recebido - ${videoSizeMB}MB, formato: ${mimeType}]`
+
+    } catch (error) {
+      console.error('Error processing video:', error)
+      return null
+    }
+  }
+
   async processMedia(
     mediaBuffer: Buffer, 
     mimeType: string, 
@@ -256,9 +274,7 @@ class MediaProcessor {
         return await this.transcribeAudio(mediaBuffer, mimeType)
       
       case 'video':
-        // For now, we don't process video
-        console.log('Video processing not yet implemented')
-        return null
+        return await this.processVideo(mediaBuffer, mimeType)
       
       default:
         console.log(`Unsupported media type: ${messageType}`)
