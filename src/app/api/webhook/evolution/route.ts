@@ -125,35 +125,70 @@ export async function POST(request: NextRequest) {
         let transcription: string | undefined
 
         // Debug para entender o problema
-        if (messageType === 'audio') {
-          console.log('Audio message detected:')
+        if (messageType === 'audio' || messageType === 'image' || messageType === 'document') {
+          console.log(`${messageType.toUpperCase()} message detected:`)
           console.log('- messageType:', messageType)
           console.log('- message.base64 present:', !!message.base64)
           console.log('- data.message.base64 present:', !!(data.message?.base64))
           console.log('- message.base64 length:', message.base64?.length || 0)
           console.log('- data.message.base64 length:', data.message?.base64?.length || 0)
           console.log('- whatsappMediaUrl:', whatsappMediaUrl)
-          console.log('- audioMessage.url:', message.message?.audioMessage?.url)
+          if (messageType === 'audio') {
+            console.log('- audioMessage.url:', message.message?.audioMessage?.url)
+          } else if (messageType === 'image') {
+            console.log('- imageMessage.url:', message.message?.imageMessage?.url)
+          } else if (messageType === 'document') {
+            console.log('- documentMessage.url:', message.message?.documentMessage?.url)
+          }
         }
 
-        // Verificar se é áudio do WhatsApp Official API (tem base64 direto)
-        if (messageType === 'audio' && data.message?.base64 && !whatsappMediaUrl) {
-          console.log('Processing WhatsApp Official API audio from base64')
+        // Verificar se é mídia do WhatsApp Official API (tem base64 direto)
+        if ((messageType === 'audio' || messageType === 'image' || messageType === 'document') &&
+            data.message?.base64 && !whatsappMediaUrl) {
+          console.log(`Processing WhatsApp Official API ${messageType} from base64`)
 
           try {
             // Converter base64 para buffer
             const mediaBuffer = Buffer.from(data.message.base64, 'base64')
-            console.log(`Audio decoded from base64 (${mediaBuffer.length} bytes)`)
+            console.log(`${messageType.charAt(0).toUpperCase() + messageType.slice(1)} decoded from base64 (${mediaBuffer.length} bytes)`)
+
+            // Determinar nome do arquivo e pasta baseado no tipo
+            let fileName: string
+            let folder: string
+            let defaultMimetype: string
+
+            switch (messageType) {
+              case 'audio':
+                fileName = `audio_${message.key.id}.ogg`
+                folder = 'audio'
+                defaultMimetype = 'audio/ogg'
+                break
+              case 'image':
+                fileName = `image_${message.key.id}.jpg`
+                folder = 'images'
+                defaultMimetype = 'image/jpeg'
+                break
+              case 'document':
+                const originalFileName = message.message?.documentMessage?.fileName || 'document'
+                const fileExtension = originalFileName.split('.').pop() || 'pdf'
+                fileName = `document_${message.key.id}.${fileExtension}`
+                folder = 'documents'
+                defaultMimetype = 'application/pdf'
+                break
+              default:
+                fileName = `media_${message.key.id}.bin`
+                folder = 'uploads'
+                defaultMimetype = 'application/octet-stream'
+            }
 
             // Upload para MinIO
-            const fileName = `audio_${message.key.id}.ogg`
-            minioUrl = await uploadBufferToMinio(mediaBuffer, fileName, mimetype || 'audio/ogg', 'audio')
+            minioUrl = await uploadBufferToMinio(mediaBuffer, fileName, mimetype || defaultMimetype, folder)
 
             // Buscar configuração de processamento de mídia
             const config = await BotConfig.findOne().sort({ updatedAt: -1 })
 
             if (config?.mediaProcessing?.enabled) {
-              // Processar com IA (transcrição)
+              // Processar com IA
               const mediaProcessor = MediaProcessor.getInstance()
               await mediaProcessor.initialize({
                 googleVisionEnabled: config.mediaProcessing?.googleVision?.enabled || false,
@@ -170,23 +205,34 @@ export async function POST(request: NextRequest) {
               if (mediaProcessor.isConfigured()) {
                 const extractedText = await mediaProcessor.processMedia(
                   mediaBuffer,
-                  mimetype || 'audio/ogg',
-                  'audio'
+                  mimetype || defaultMimetype,
+                  messageType as 'audio' | 'image' | 'document'
                 )
 
                 if (extractedText) {
-                  transcription = extractedText
-                  messageText = extractedText // ✅ IA recebe transcrição!
-                  console.log(`WhatsApp Official audio transcribed: ${extractedText.substring(0, 100)}...`)
+                  if (messageType === 'audio') {
+                    transcription = extractedText
+                    messageText = extractedText // ✅ IA recebe transcrição!
+                    console.log(`WhatsApp Official audio transcribed: ${extractedText.substring(0, 100)}...`)
+                  } else {
+                    // Para imagens e documentos, substituir o texto padrão ou adicionar ao caption existente
+                    if (messageText === '[Imagem enviada]' ||
+                        messageText.startsWith('[Documento:')) {
+                      messageText = extractedText
+                    } else {
+                      messageText = `${messageText}\n\n[Texto extraído]:\n${extractedText}`
+                    }
+                    console.log(`WhatsApp Official ${messageType} processed: ${extractedText.substring(0, 100)}...`)
+                  }
                 }
               } else {
-                console.log('Media processor not configured for audio transcription')
+                console.log(`Media processor not configured for ${messageType} processing`)
               }
             } else {
               console.log('Media processing disabled in configuration')
             }
           } catch (error) {
-            console.error('Error processing WhatsApp Official audio:', error)
+            console.error(`Error processing WhatsApp Official ${messageType}:`, error)
           }
         }
         // Se há URL de mídia, baixar usando Evolution API (decodificado) e salvar no MinIO
