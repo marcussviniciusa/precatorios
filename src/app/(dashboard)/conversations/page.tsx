@@ -28,6 +28,10 @@ import {
 import { formatDate } from '@/lib/utils'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { getAuthHeaders } from '@/lib/client-auth'
+import { usePaginatedConversations } from '@/hooks/usePaginatedConversations'
+import { PaginationControls } from '@/components/conversations/PaginationControls'
+import { ConversationsHeader } from '@/components/conversations/ConversationsHeader'
+import { ConversationListItem } from '@/components/conversations/ConversationListItem'
 
 // Component for WhatsApp-style audio messages
 interface AudioMessageProps {
@@ -44,7 +48,6 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser, transcription, conversat
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState<number | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [showTranscription, setShowTranscription] = useState(false)
   const [currentTranscription, setCurrentTranscription] = useState(transcription)
@@ -59,7 +62,6 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser, transcription, conversat
     const handleLoadedMetadata = () => {
       console.log('Audio loaded successfully:', audioUrl)
       setDuration(audio.duration)
-      setIsLoading(false)
     }
 
     const handleTimeUpdate = () => {
@@ -76,12 +78,10 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser, transcription, conversat
     const handleError = (e: Event) => {
       console.error('Audio loading error:', e, audioUrl)
       setHasError(true)
-      setIsLoading(false)
     }
 
     const handleCanPlay = () => {
       console.log('Audio can play:', audioUrl)
-      setIsLoading(false)
     }
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
@@ -198,16 +198,16 @@ const AudioMessage = ({ audioUrl, mimetype, isFromUser, transcription, conversat
 
       <button
         onClick={togglePlayPause}
-        disabled={isLoading}
+        disabled={false}
         className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-          isLoading
+          false
             ? 'bg-gray-300 cursor-not-allowed'
             : isFromUser
             ? 'bg-green-500 hover:bg-green-600 text-white'
             : 'bg-green-500 hover:bg-green-600 text-white'
         }`}
       >
-        {isLoading ? (
+        {false ? (
           <RefreshCw className="w-4 h-4 animate-spin" />
         ) : isPlaying ? (
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -349,10 +349,24 @@ interface InstanceInfo {
 }
 
 export default function ConversationsPage() {
-  const [conversations, setConversations] = useState<ConversationListItem[]>([])
+  // Hook de paginação
+  const {
+    conversations,
+    loading: conversationsLoading,
+    error: conversationsError,
+    currentPage,
+    totalPages,
+    totalCount,
+    itemsPerPage,
+    pageInfo,
+    showingAll,
+    fetchPage,
+    setItemsPerPage,
+    refresh
+  } = usePaginatedConversations(25)
+
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
   const [conversationDetails, setConversationDetails] = useState<ConversationDetails | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [messagesLoading, setMessagesLoading] = useState(false)
   const [newMessage, setNewMessage] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
@@ -404,33 +418,11 @@ export default function ConversationsPage() {
   }, [selectedConversation, conversationDetails])
 
   const handleConversationUpdated = useCallback((data: { conversationId: string; lastMessage?: string; lastMessageTime?: Date; isUserMessage?: boolean }) => {
-    // Update the conversation in the list
-    setConversations(prev => prev.map(conv => {
-      if (conv._id === data.conversationId) {
-        // Only increment unread count if:
-        // 1. It's a user message (not bot/agent)
-        // 2. The conversation is not currently selected
-        const shouldIncrementUnread = data.isUserMessage && selectedConversation !== data.conversationId
-
-        return {
-          ...conv,
-          lastMessage: data.lastMessage || conv.lastMessage,
-          lastMessageTime: data.lastMessageTime ? new Date(data.lastMessageTime) : conv.lastMessageTime,
-          unreadCount: selectedConversation === data.conversationId
-            ? 0 // Reset to 0 if conversation is selected
-            : shouldIncrementUnread
-            ? conv.unreadCount + 1
-            : conv.unreadCount // Keep existing count for bot/agent messages
-        }
-      }
-      return conv
-    }))
-  }, [selectedConversation])
+    // Refresh the conversations list to get updated data
+    refresh()
+  }, [refresh])
 
   const handleConversationDeleted = useCallback((data: { conversationId: string }) => {
-    // Remove conversation from list
-    setConversations(prev => prev.filter(conv => conv._id !== data.conversationId))
-
     // Clear selection if it was the deleted conversation
     if (selectedConversation === data.conversationId) {
       setSelectedConversation(null)
@@ -438,7 +430,9 @@ export default function ConversationsPage() {
       setInstanceInfo(null)
       setInstanceError(null)
     }
-  }, [selectedConversation])
+    // Refresh list to remove deleted conversation
+    refresh()
+  }, [selectedConversation, refresh])
 
   // WebSocket hook for real-time updates
   const { isConnected, joinConversation, leaveConversation } = useWebSocket({
@@ -450,21 +444,8 @@ export default function ConversationsPage() {
   // Refresh conversations when WebSocket reconnects to ensure data consistency
   useEffect(() => {
     if (isConnected && conversations.length > 0) {
-      // Refresh conversations data after reconnection
-      const refreshConversations = async () => {
-        try {
-          const response = await fetch('/api/conversations')
-          if (response.ok) {
-            const conversationsData = await response.json()
-            setConversations(conversationsData)
-          }
-        } catch (error) {
-          console.error('Error refreshing conversations after reconnection:', error)
-        }
-      }
-
       // Add a small delay to ensure WebSocket is fully ready
-      const timeoutId = setTimeout(refreshConversations, 1000)
+      const timeoutId = setTimeout(refresh, 1000)
       return () => clearTimeout(timeoutId)
     }
   }, [isConnected, conversations.length])
@@ -480,31 +461,14 @@ export default function ConversationsPage() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  useEffect(() => {
-    async function fetchConversations() {
-      try {
-        const response = await fetch('/api/conversations')
-        if (response.ok) {
-          const conversationsData = await response.json()
-          setConversations(conversationsData)
-        }
-      } catch (error) {
-        console.error('Erro ao carregar conversas:', error)
-        setConversations([])
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchConversations()
-  }, [])
+  // Initial load is handled by usePaginatedConversations hook
 
   // 🔥 NOVA LÓGICA: Auto-seleção baseada na URL
   useEffect(() => {
     const selectedParam = searchParams?.get('selected')
 
     // Só processa se há parâmetro e conversas carregadas
-    if (selectedParam && conversations.length > 0 && !isLoading) {
+    if (selectedParam && conversations.length > 0 && !conversationsLoading) {
       // Verifica se a conversa existe
       const conversationExists = conversations.some(conv => conv._id === selectedParam)
 
@@ -531,7 +495,7 @@ export default function ConversationsPage() {
         setShowConversationList(true)
       }
     }
-  }, [searchParams, conversations, isLoading, selectedConversation])
+  }, [searchParams, conversations, conversationsLoading, selectedConversation])
 
   // Auto-scroll para a última mensagem
   const scrollToBottom = () => {
@@ -584,12 +548,8 @@ export default function ConversationsPage() {
           method: 'POST'
         })
 
-        // Atualizar contador de não lidas na lista
-        setConversations(prev => prev.map(conv =>
-          conv._id === conversationId
-            ? { ...conv, unreadCount: 0 }
-            : conv
-        ))
+        // Refresh conversations to update unread count
+        refresh()
       }
     } catch (error) {
       console.error('Erro ao carregar mensagens:', error)
@@ -644,11 +604,7 @@ export default function ConversationsPage() {
           setSelectedFile(null)
 
           // Atualizar lista de conversas
-          const conversationsResponse = await fetch('/api/conversations')
-          if (conversationsResponse.ok) {
-            const conversationsData = await conversationsResponse.json()
-            setConversations(conversationsData)
-          }
+          await refresh()
         }
       } else {
         // Enviar mensagem de texto normal
@@ -666,11 +622,7 @@ export default function ConversationsPage() {
           setNewMessage('')
 
           // Atualizar lista de conversas
-          const conversationsResponse2 = await fetch('/api/conversations')
-          if (conversationsResponse2.ok) {
-            const conversationsData = await conversationsResponse2.json()
-            setConversations(conversationsData)
-          }
+          await refresh()
         }
       }
     } catch (error) {
@@ -774,11 +726,7 @@ export default function ConversationsPage() {
 
       if (response.ok) {
         // Atualizar conversa na lista
-        setConversations(prev => prev.map(conv =>
-          conv._id === selectedConversation
-            ? { ...conv, status: 'transferred' }
-            : conv
-        ))
+        await refresh()
 
         // Atualizar detalhes se necessário
         if (conversationDetails) {
@@ -830,14 +778,10 @@ export default function ConversationsPage() {
 
       if (response.ok) {
         // Atualizar conversa na lista
-        const newStatus = action === 'pause' ? 'paused' : 'active'
-        setConversations(prev => prev.map(conv =>
-          conv._id === selectedConversation
-            ? { ...conv, status: newStatus }
-            : conv
-        ))
+        await refresh()
 
         // Atualizar detalhes
+        const newStatus = action === 'pause' ? 'paused' : 'active'
         if (conversationDetails) {
           setConversationDetails(prev => prev ? {
             ...prev,
@@ -874,8 +818,8 @@ export default function ConversationsPage() {
       })
 
       if (response.ok) {
-        // Remover da lista de conversas
-        setConversations(prev => prev.filter(conv => conv._id !== conversationId))
+        // Atualizar lista de conversas
+        await refresh()
 
         // Se era a conversa selecionada, limpar seleção
         if (selectedConversation === conversationId) {
@@ -923,7 +867,7 @@ export default function ConversationsPage() {
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
-  if (isLoading) {
+  if (conversationsLoading && conversations.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-lg text-gray-600">Carregando conversas...</div>
@@ -1267,14 +1211,16 @@ export default function ConversationsPage() {
         <div className="flex-1 grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 overflow-hidden">
           {/* Lista de conversas desktop */}
           <Card className="xl:col-span-1 flex flex-col overflow-hidden">
-            <CardHeader className="flex-shrink-0">
-              <CardTitle className="flex items-center justify-between">
-                <span>Conversas ({conversations.length})</span>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </CardTitle>
-            </CardHeader>
+            {/* Header com seletor de itens por página */}
+            <ConversationsHeader
+              totalCount={totalCount}
+              itemsPerPage={itemsPerPage}
+              pageInfo={pageInfo}
+              showingAll={showingAll}
+              loading={conversationsLoading}
+              onItemsPerPageChange={setItemsPerPage}
+              onRefresh={refresh}
+            />
             <CardContent className="p-0 flex-1 overflow-hidden">
               {conversations.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
@@ -1288,79 +1234,35 @@ export default function ConversationsPage() {
                 </div>
               ) : (
                 <div className="h-full overflow-y-auto">
-                  {conversations.map((conversation) => (
-                  <div
-                    key={conversation._id}
-                    className={`relative group p-4 border-b transition-colors ${
-                      selectedConversation === conversation._id ? 'bg-blue-50 border-l-4 border-l-primary' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    {/* Botão de excluir (visível no hover) */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteConversation(conversation._id, conversation.leadName)
-                      }}
-                      disabled={deletingConversation === conversation._id}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full p-1 text-xs disabled:opacity-50"
-                      title={`Excluir conversa com ${conversation.leadName}`}
-                    >
-                      {deletingConversation === conversation._id ? (
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-3 h-3" />
-                      )}
-                    </button>
-
-                    {/* Conteúdo da conversa (clicável para selecionar) */}
-                    <div
-                      className="cursor-pointer"
-                      onClick={() => handleConversationSelect(conversation._id)}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                            {conversation.leadName.split(' ').map(n => n[0]).join('')}
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900">{conversation.leadName}</h4>
-                            <p className="text-xs text-gray-500">{conversation.leadPhone}</p>
-                          </div>
-                        </div>
-                        {conversation.unreadCount > 0 && (
-                          <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                            {conversation.unreadCount}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center space-x-2 mb-2">
-                        {getStatusBadge(conversation.status)}
-                        {getClassificationBadge(conversation.classification)}
-                      </div>
-
-                      <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                        {conversation.lastMessage}
-                      </p>
-
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-3 h-3" />
-                          <span>{formatDate(new Date(conversation.lastMessageTime))}</span>
-                        </div>
-                        {conversation.assignedAgent && (
-                          <div className="flex items-center space-x-1">
-                            <User className="w-3 h-3" />
-                            <span>{conversation.assignedAgent}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  {conversations.map((conversation, index) => (
+                    <ConversationListItem
+                      key={conversation._id}
+                      conversation={conversation}
+                      index={index}
+                      currentPage={currentPage}
+                      itemsPerPage={itemsPerPage}
+                      onSelect={handleConversationSelect}
+                      onDelete={handleDeleteConversation}
+                      isSelected={selectedConversation === conversation._id}
+                      isMobile={false}
+                      isDeleting={deletingConversation === conversation._id}
+                    />
                   ))}
                 </div>
               )}
             </CardContent>
+
+            {/* Componente de paginação */}
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageInfo={pageInfo}
+              itemsPerPage={itemsPerPage}
+              totalCount={totalCount}
+              showingAll={showingAll}
+              loading={conversationsLoading}
+              onPageChange={fetchPage}
+            />
           </Card>
 
           {/* Chat desktop - mantém o original completo */}
