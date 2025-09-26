@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Loader2, X } from 'lucide-react'
@@ -36,6 +36,11 @@ export function ClassificationModal({
   const [selectedClassification, setSelectedClassification] = useState<string>(currentClassification)
   const [isUpdating, setIsUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Atualizar classificação selecionada quando a atual muda
+  useEffect(() => {
+    setSelectedClassification(currentClassification)
+  }, [currentClassification])
 
   const classifications: ClassificationOption[] = [
     {

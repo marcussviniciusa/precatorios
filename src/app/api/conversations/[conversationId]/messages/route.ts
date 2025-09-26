@@ -25,7 +25,7 @@ export async function GET(
     // Buscar lead separadamente
     let lead = null
     if (conversation.leadId) {
-      lead = await Lead.findById(conversation.leadId).select('name phone profilePicUrl')
+      lead = await Lead.findById(conversation.leadId).select('name phone profilePicUrl classification')
     }
 
     // Ordenar mensagens por timestamp
