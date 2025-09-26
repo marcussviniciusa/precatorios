@@ -1368,7 +1368,7 @@ export default function ConversationsPage() {
                       variant="outline"
                       size="sm"
                       onClick={openTransferModal}
-                      disabled={transferring || conversationDetails?.status === 'transferred'}
+                      disabled={transferring}
                     >
                       {transferring ? 'Transferindo...' : 'Transferir'}
                     </Button>
@@ -1376,7 +1376,7 @@ export default function ConversationsPage() {
                       variant="outline"
                       size="sm"
                       onClick={handlePauseBotToggle}
-                      disabled={pausingBot || conversationDetails?.status === 'transferred'}
+                      disabled={pausingBot}
                     >
                       {pausingBot ? 'Processando...' :
                         conversationDetails?.status === 'paused' ? 'Retomar Bot' : 'Pausar Bot'}
