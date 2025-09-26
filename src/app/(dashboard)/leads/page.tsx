@@ -325,7 +325,7 @@ export default function LeadsPage() {
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Valor</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Localização</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Responsável</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Última Interação</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Primeira Interação</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Ações</th>
                     </tr>
                   </thead>
@@ -391,7 +391,7 @@ export default function LeadsPage() {
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-600">
-                          {formatDate(lead.lastInteraction)}
+                          {formatDate(lead.createdAt)}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -508,7 +508,7 @@ export default function LeadsPage() {
                         {lead.assignedTo ? `Responsável: ${lead.assignedTo}` : 'Não atribuído'}
                       </div>
                       <div>
-                        {formatDate(lead.lastInteraction)}
+                        {formatDate(lead.createdAt)}
                       </div>
                     </div>
                   </div>
