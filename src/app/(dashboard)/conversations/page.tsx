@@ -23,7 +23,8 @@ import {
   EyeOff,
   FileText,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  Tag
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -32,6 +33,7 @@ import { usePaginatedConversations } from '@/hooks/usePaginatedConversations'
 import { PaginationControls } from '@/components/conversations/PaginationControls'
 import { ConversationsHeader } from '@/components/conversations/ConversationsHeader'
 import { ConversationListItem } from '@/components/conversations/ConversationListItem'
+import { ClassificationModal } from '@/components/conversations/ClassificationModal'
 
 // Component for WhatsApp-style audio messages
 interface AudioMessageProps {
@@ -385,6 +387,7 @@ export default function ConversationsPage() {
   const [selectedAgent, setSelectedAgent] = useState<string>('')
   const [agents, setAgents] = useState<any[]>([])
   const [loadingAgents, setLoadingAgents] = useState(false)
+  const [showClassificationModal, setShowClassificationModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Next.js 14 hooks para URL parameters
@@ -1378,6 +1381,16 @@ export default function ConversationsPage() {
                       {pausingBot ? 'Processando...' :
                         conversationDetails?.status === 'paused' ? 'Retomar Bot' : 'Pausar Bot'}
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowClassificationModal(true)}
+                      disabled={!conversationDetails?.leadId}
+                      title="Classificar Lead Manualmente"
+                    >
+                      <Tag className="w-4 h-4 mr-1" />
+                      Classificação
+                    </Button>
                   </div>
                 )}
               </CardTitle>
@@ -1754,6 +1767,32 @@ export default function ConversationsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Classificação */}
+      {showClassificationModal && conversationDetails?.leadId && (
+        <ClassificationModal
+          isOpen={showClassificationModal}
+          onClose={() => setShowClassificationModal(false)}
+          currentClassification={conversationDetails.leadId.classification || 'cold'}
+          leadName={conversationDetails.leadId.name || 'Lead sem nome'}
+          leadId={conversationDetails.leadId._id || conversationDetails.leadId.toString()}
+          onClassificationUpdate={(newClassification) => {
+            // Atualizar classificação localmente no estado
+            if (conversationDetails && conversationDetails.leadId) {
+              setConversationDetails({
+                ...conversationDetails,
+                leadId: {
+                  ...conversationDetails.leadId,
+                  classification: newClassification
+                }
+              })
+            }
+
+            // Atualizar lista de conversas para refletir mudança
+            refresh()
+          }}
+        />
       )}
     </div>
   )
