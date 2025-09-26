@@ -90,7 +90,7 @@ export async function PUT(
             details: {
               previousClassification: currentLead.classification,
               newClassification: classification,
-              updatedBy: user.email || user.name || 'Sistema',
+              updatedBy: user.email || 'Sistema',
               source: 'manual'
             },
             timestamp: new Date()
