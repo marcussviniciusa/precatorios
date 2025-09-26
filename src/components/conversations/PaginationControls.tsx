@@ -27,13 +27,17 @@ export function PaginationControls({
   // Se está mostrando todas as conversas ou só tem uma página
   if (showingAll || totalPages <= 1) {
     return (
-      <div className="flex items-center justify-center py-4 border-t bg-gray-50">
-        <div className="text-sm text-green-600 font-medium flex items-center">
-          <CheckCircle className="w-4 h-4 mr-2" />
-          {totalCount > 0
-            ? `Todas as ${totalCount} conversas carregadas`
-            : 'Nenhuma conversa disponível'
-          }
+      <div className="border-t bg-gray-50 p-4">
+        <div className="flex items-center justify-center">
+          <div className="text-sm text-green-600 font-medium flex items-center text-center">
+            <CheckCircle className="w-4 h-4 mr-2 shrink-0" />
+            <span>
+              {totalCount > 0
+                ? `Todas as ${totalCount} conversas carregadas`
+                : 'Nenhuma conversa disponível'
+              }
+            </span>
+          </div>
         </div>
       </div>
     )
@@ -57,76 +61,85 @@ export function PaginationControls({
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between py-4 px-4 border-t bg-gray-50 gap-4">
-      {/* Informações da página */}
-      <div className="text-sm text-gray-600">
-        <span className="font-medium">
-          Conversas #{pageInfo.startNumber} - #{pageInfo.endNumber}
-        </span>
-        <span className="text-gray-400 ml-2">
-          (Página {currentPage} de {totalPages})
-        </span>
+    <div className="border-t bg-gray-50 p-4 space-y-3">
+      {/* Linha 1: Informações da página */}
+      <div className="flex items-center justify-center">
+        <div className="text-sm text-gray-600 text-center">
+          <span className="font-medium">
+            Conversas #{pageInfo.startNumber} - #{pageInfo.endNumber}
+          </span>
+          <span className="text-gray-400 block sm:inline sm:ml-2">
+            Página {currentPage} de {totalPages}
+          </span>
+        </div>
       </div>
 
-      {/* Controles de navegação */}
-      <div className="flex items-center space-x-1">
-        {/* Botão Anterior */}
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={currentPage === 1 || loading}
-          onClick={() => onPageChange(currentPage - 1)}
-          className="h-8 px-3"
-        >
-          ← Anterior
-        </Button>
+      {/* Linha 2: Controles de navegação */}
+      <div className="flex items-center justify-center">
+        <div className="flex items-center space-x-1">
+          {/* Botão Anterior */}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === 1 || loading}
+            onClick={() => onPageChange(currentPage - 1)}
+            className="h-8 px-2 sm:px-3"
+          >
+            <span className="hidden sm:inline">← Anterior</span>
+            <span className="sm:hidden">←</span>
+          </Button>
 
-        {/* Números de página - ocultar em mobile */}
-        <div className="hidden sm:flex items-center space-x-1">
-          {getVisiblePages().map((page, idx) =>
-            page === '...' ? (
-              <span key={`ellipsis-${idx}`} className="px-2 py-1 text-gray-400">
-                ...
-              </span>
-            ) : (
-              <Button
-                key={page}
-                variant={currentPage === page ? "default" : "outline"}
-                size="sm"
-                onClick={() => onPageChange(page as number)}
-                disabled={loading}
-                className="w-8 h-8 p-0"
-              >
-                {page}
-              </Button>
-            )
-          )}
+          {/* Números de página - responsivo */}
+          <div className="flex items-center space-x-1">
+            {/* Mobile: Select dropdown */}
+            <select
+              className="sm:hidden text-sm border rounded px-2 py-1 min-w-0"
+              value={currentPage}
+              onChange={(e) => onPageChange(Number(e.target.value))}
+              disabled={loading}
+            >
+              {Array.from({ length: totalPages }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {i + 1}
+                </option>
+              ))}
+            </select>
+
+            {/* Desktop: Números de página */}
+            <div className="hidden sm:flex items-center space-x-1">
+              {getVisiblePages().map((page, idx) =>
+                page === '...' ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 py-1 text-gray-400 text-sm">
+                    ...
+                  </span>
+                ) : (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => onPageChange(page as number)}
+                    disabled={loading}
+                    className="w-8 h-8 p-0 text-sm"
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+            </div>
+          </div>
+
+          {/* Botão Próxima */}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === totalPages || loading}
+            onClick={() => onPageChange(currentPage + 1)}
+            className="h-8 px-2 sm:px-3"
+          >
+            <span className="hidden sm:inline">Próxima →</span>
+            <span className="sm:hidden">→</span>
+          </Button>
         </div>
-
-        {/* Select para mobile */}
-        <select
-          className="sm:hidden text-sm border rounded px-2 py-1"
-          value={currentPage}
-          onChange={(e) => onPageChange(Number(e.target.value))}
-          disabled={loading}
-        >
-          {Array.from({ length: totalPages }, (_, i) => (
-            <option key={i + 1} value={i + 1}>
-              Página {i + 1}
-            </option>
-          ))}
-        </select>
-
-        {/* Botão Próxima */}
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={currentPage === totalPages || loading}
-          onClick={() => onPageChange(currentPage + 1)}
-          className="h-8 px-3"
-        >
-          Próxima →
-        </Button>
       </div>
     </div>
   )

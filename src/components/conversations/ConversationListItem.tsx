@@ -62,14 +62,14 @@ export function ConversationListItem({
       {/* Numeração Visual */}
       {isMobile ? (
         // Mobile: Canto superior direito
-        <div className="absolute top-3 right-3 z-10">
-          <div className="bg-primary/10 text-primary rounded-full px-2.5 py-1 text-xs font-semibold">
+        <div className="absolute top-2 right-2 z-10">
+          <div className="bg-primary/10 text-primary rounded-full px-2 py-1 text-xs font-semibold min-w-[2rem] text-center">
             #{conversationNumber}
           </div>
         </div>
       ) : (
         // Desktop: Canto superior esquerdo
-        <div className="absolute top-3 left-3 z-10">
+        <div className="absolute top-2 left-2 z-10">
           <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm">
             #{conversationNumber}
           </div>
@@ -84,8 +84,8 @@ export function ConversationListItem({
         }}
         disabled={isDeleting}
         className={`absolute ${
-          isMobile ? 'top-12 right-3' : 'top-2 right-2 opacity-0 group-hover:opacity-100'
-        } transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 text-xs disabled:opacity-50`}
+          isMobile ? 'top-10 right-2' : 'top-2 right-2 opacity-0 group-hover:opacity-100'
+        } transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 text-xs disabled:opacity-50 z-20`}
         title={`Excluir conversa com ${conversation.leadName}`}
       >
         {isDeleting ? (
@@ -97,7 +97,7 @@ export function ConversationListItem({
 
       {/* Conteúdo da conversa */}
       <div
-        className={`cursor-pointer ${isMobile ? 'pr-16' : 'pl-14 pr-12'}`}
+        className={`cursor-pointer ${isMobile ? 'pt-8 pr-12' : 'pl-12 pr-12'}`}
         onClick={() => onSelect(conversation._id)}
       >
         <div className="flex items-start justify-between mb-2">
