@@ -79,7 +79,7 @@ export function ConversationsHeader({
             <option value={25}>25</option>
             <option value={50}>50</option>
             <option value={100}>100</option>
-            <option value={500}>Todas</option>
+            <option value={500}>500</option>
           </select>
           <span className="text-sm text-gray-600 whitespace-nowrap">
             por página
