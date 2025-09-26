@@ -388,6 +388,7 @@ export default function ConversationsPage() {
   const [agents, setAgents] = useState<any[]>([])
   const [loadingAgents, setLoadingAgents] = useState(false)
   const [showClassificationModal, setShowClassificationModal] = useState(false)
+  const [isInitialLoad, setIsInitialLoad] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Next.js 14 hooks para URL parameters
@@ -501,15 +502,36 @@ export default function ConversationsPage() {
   }, [searchParams, conversations, conversationsLoading, selectedConversation])
 
   // Auto-scroll para a última mensagem
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const scrollToBottom = useCallback((immediate: boolean = false) => {
+    setTimeout(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({
+          behavior: immediate ? 'instant' : 'smooth',
+          block: 'end'
+        })
+      }
+    }, immediate ? 0 : 100)
+  }, [])
 
+  // Scroll imediato apenas no carregamento inicial da conversa
   useEffect(() => {
-    if (conversationDetails?.messages?.length) {
-      scrollToBottom()
+    if (conversationDetails?.messages?.length && !messagesLoading && isInitialLoad) {
+      scrollToBottom(true) // Scroll imediato na primeira carga
+      setIsInitialLoad(false) // Reset para não fazer scroll em novas mensagens
     }
-  }, [conversationDetails?.messages])
+  }, [conversationDetails?.messages, messagesLoading, isInitialLoad, scrollToBottom])
+
+  // Scroll suave quando novas mensagens chegam (apenas para bot e agent)
+  useEffect(() => {
+    if (conversationDetails?.messages?.length && !messagesLoading && !isInitialLoad) {
+      const lastMessage = conversationDetails.messages[conversationDetails.messages.length - 1]
+
+      // Fazer scroll apenas se a última mensagem for do bot ou agente
+      if (lastMessage && (lastMessage.sender === 'bot' || lastMessage.sender === 'agent')) {
+        scrollToBottom(false)
+      }
+    }
+  }, [conversationDetails?.messages?.length, messagesLoading, isInitialLoad])
 
   // Buscar informações da instância para uma conversa
   const fetchInstanceInfo = async (conversationId: string) => {
@@ -538,6 +560,7 @@ export default function ConversationsPage() {
   const fetchConversationMessages = async (conversationId: string) => {
     try {
       setMessagesLoading(true)
+      setIsInitialLoad(true) // Marcar como carregamento inicial
       const response = await fetch(`/api/conversations/${conversationId}/messages`)
       if (response.ok) {
         const data = await response.json()
@@ -558,6 +581,8 @@ export default function ConversationsPage() {
       console.error('Erro ao carregar mensagens:', error)
     } finally {
       setMessagesLoading(false)
+      // Garantir scroll para baixo após carregar
+      setTimeout(() => scrollToBottom(true), 200)
     }
   }
 
