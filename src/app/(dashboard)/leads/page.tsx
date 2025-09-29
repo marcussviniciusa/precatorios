@@ -71,13 +71,24 @@ export default function LeadsPage() {
 
   // Função para calcular número do lead baseado na ordem de criação global
   const getLeadNumber = (lead: Lead) => {
+    // Verificar se lead existe
+    if (!lead || !lead._id) return '000'
+
     // Ordenar todos os leads originais por data de criação (mais antigo primeiro)
     const sortedByCreation = [...leads].sort((a, b) =>
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     )
 
-    // Retornar posição do lead na lista ordenada + 1
-    return sortedByCreation.findIndex(l => l._id === lead._id) + 1
+    // Encontrar posição do lead na lista ordenada
+    const index = sortedByCreation.findIndex(l => l._id === lead._id)
+
+    // Retornar número formatado com zeros à esquerda (padrão brasileiro)
+    if (index >= 0) {
+      const number = index + 1
+      return number.toString().padStart(3, '0') // Ex: 001, 002, 003...
+    }
+
+    return '000' // Fallback se não encontrado
   }
 
   useEffect(() => {
@@ -316,31 +327,37 @@ export default function LeadsPage() {
     return labels[type] || type
   }
 
-  const convertToCSV = (data: any[]): string => {
+  const convertToCSV = (data: any[], delimiter: string = ';'): string => {
     if (data.length === 0) return ''
 
     const headers = Object.keys(data[0])
     const csvRows = []
 
     // Adicionar cabeçalhos
-    csvRows.push(headers.join(','))
+    csvRows.push(headers.map(header => `"${header}"`).join(delimiter))
 
     // Adicionar dados
     for (const row of data) {
       const values = headers.map(header => {
         const value = row[header]
-        // Escapar aspas e quebras de linha
-        const escaped = String(value || '').replace(/"/g, '""')
-        return `"${escaped}"`
+        // Tratar valores null/undefined e escapar aspas
+        const stringValue = value === null || value === undefined ? '' : String(value)
+        // Escapar aspas duplas e remover quebras de linha
+        const cleaned = stringValue.replace(/[\r\n]/g, ' ').replace(/"/g, '""')
+        return `"${cleaned}"`
       })
-      csvRows.push(values.join(','))
+      csvRows.push(values.join(delimiter))
     }
 
-    return csvRows.join('\n')
+    return csvRows.join('\r\n') // Usar CRLF para melhor compatibilidade Windows
   }
 
   const downloadCSV = (csvContent: string, filename: string) => {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    // Adicionar BOM UTF-8 para compatibilidade com Excel
+    const BOM = '\uFEFF'
+    const csvWithBOM = BOM + csvContent
+
+    const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
 
     if (link.download !== undefined) {
@@ -365,37 +382,51 @@ export default function LeadsPage() {
     const selectedLeadsList = leads.filter(lead => selectedLeads.has(lead._id))
 
     // Transformar dados para CSV
-    const csvData = selectedLeadsList.map(lead => ({
-      'Número': getLeadNumber(lead),
-      'Nome': lead.name,
-      'Telefone': lead.phone,
-      'Email': lead.email || '',
-      'CPF': lead.cpf || '',
-      'Score': lead.score,
-      'Classificação': getClassificationLabel(lead.classification),
-      'Status': getStatusLabel(lead.status),
-      'Tipo Precatório': getPrecatorioTypeLabel(lead.precatorioType),
-      'Valor Precatório': lead.precatorioValue ? formatCurrency(lead.precatorioValue) : '',
-      'Cidade': lead.city || '',
-      'Estado': lead.state || '',
-      'Responsável': lead.assignedTo || 'Não atribuído',
-      'Possui Precatório': lead.hasPrecatorio ? 'Sim' : 'Não',
-      'Elegível': lead.isEligible ? 'Sim' : 'Não',
-      'Urgência': lead.urgency || 'Não informado',
-      'Fonte': lead.source,
-      'Data de Criação': formatDate(lead.createdAt!),
-      'Última Interação': lead.lastInteraction ? formatDate(lead.lastInteraction) : ''
-    }))
+    const csvData = selectedLeadsList.map(lead => {
+      // Helper para formatar urgência
+      const formatUrgency = (urgency?: string) => {
+        if (!urgency) return 'Não informado'
+        switch (urgency) {
+          case 'high': return 'Alta'
+          case 'medium': return 'Média'
+          case 'low': return 'Baixa'
+          default: return urgency
+        }
+      }
+
+      return {
+        'Número': `="${getLeadNumber(lead)}"`,
+        'Nome': lead.name || '',
+        'Telefone': `="${lead.phone || ''}"`,  // Forçar como texto no Excel
+        'Email': lead.email || '',
+        'CPF': `="${lead.cpf || ''}"`,
+        'Score': `="${lead.score || 0}"`,
+        'Classificação': getClassificationLabel(lead.classification),
+        'Status': getStatusLabel(lead.status),
+        'Tipo Precatório': getPrecatorioTypeLabel(lead.precatorioType),
+        'Valor Precatório': lead.precatorioValue ? formatCurrency(lead.precatorioValue).replace('R$ ', 'R$ ') : '',
+        'Cidade': lead.city || '',
+        'Estado': lead.state || '',
+        'Responsável': lead.assignedTo || 'Não atribuído',
+        'Possui Precatório': lead.hasPrecatorio === true ? 'Sim' : lead.hasPrecatorio === false ? 'Não' : 'Não informado',
+        'Elegível': lead.isEligible === true ? 'Sim' : lead.isEligible === false ? 'Não' : 'Não informado',
+        'Urgência': formatUrgency(lead.urgency),
+        'Fonte': lead.source || '',
+        'Data de Criação': lead.createdAt ? formatDate(lead.createdAt) : '',
+        'Última Interação': lead.lastInteraction ? formatDate(lead.lastInteraction) : ''
+      }
+    })
 
     // Converter para CSV e fazer download
-    const csvContent = convertToCSV(csvData)
+    // Usar ponto e vírgula para compatibilidade com Excel brasileiro
+    const csvContent = convertToCSV(csvData, ';')
     const timestamp = new Date().toISOString().split('T')[0]
     const filename = `leads-selecionados-${timestamp}.csv`
 
     downloadCSV(csvContent, filename)
 
     // Feedback para o usuário
-    alert(`${selectedLeads.size} lead(s) exportado(s) com sucesso para ${filename}!`)
+    alert(`${selectedLeads.size} lead(s) exportado(s) com sucesso!\n\nArquivo: ${filename}\n\nDica: Se as colunas não estiverem organizadas, use "Dados > Texto para Colunas" no Excel.`)
   }
 
   // Funções de paginação
