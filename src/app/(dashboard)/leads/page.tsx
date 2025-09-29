@@ -197,7 +197,9 @@ export default function LeadsPage() {
       federal: { color: 'bg-blue-100 text-blue-800', label: 'Federal' },
       estadual: { color: 'bg-green-100 text-green-800', label: 'Estadual' },
       municipal: { color: 'bg-purple-100 text-purple-800', label: 'Municipal' },
-      trabalhista: { color: 'bg-orange-100 text-orange-800', label: 'Trabalhista' }
+      trabalhista: { color: 'bg-orange-100 text-orange-800', label: 'Trabalhista' },
+      parceria: { color: 'bg-pink-100 text-pink-800', label: 'Parceria' },
+      honorarios: { color: 'bg-yellow-100 text-yellow-800', label: 'Honorários' }
     }
 
     const config = typeConfigs[type] || { color: 'bg-gray-100 text-gray-800', label: type }
@@ -286,6 +288,8 @@ export default function LeadsPage() {
                 <option value="estadual">Estadual</option>
                 <option value="municipal">Municipal</option>
                 <option value="trabalhista">Trabalhista</option>
+                <option value="parceria">Parceria</option>
+                <option value="honorarios">Honorários</option>
               </select>
             </div>
           </div>
