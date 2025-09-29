@@ -18,7 +18,8 @@ import {
   Edit,
   Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Download
 } from 'lucide-react'
 import { formatCurrency, formatDate, getLeadStatusColor } from '@/lib/utils'
 import { getAuthHeaders } from '@/lib/client-auth'
@@ -28,6 +29,7 @@ interface Lead {
   name: string
   phone: string
   email?: string
+  cpf?: string
   classification: 'hot' | 'warm' | 'cold' | 'discard'
   score: number
   status: 'new' | 'qualified' | 'in_analysis' | 'proposal' | 'closed_won' | 'closed_lost'
@@ -37,6 +39,9 @@ interface Lead {
   city?: string
   source: string
   assignedTo?: string
+  hasPrecatorio?: boolean
+  isEligible?: boolean
+  urgency?: 'low' | 'medium' | 'high'
   lastInteraction: Date
   createdAt: Date
 }
@@ -275,6 +280,124 @@ export default function LeadsPage() {
   const isAllSelected = filteredLeads.length > 0 && filteredLeads.every(lead => selectedLeads.has(lead._id))
   const isPartiallySelected = selectedLeads.size > 0 && !isAllSelected
 
+  // Funções para exportação CSV
+  const getClassificationLabel = (classification: string) => {
+    const labels: Record<string, string> = {
+      hot: 'Quente',
+      warm: 'Morno',
+      cold: 'Frio',
+      discard: 'Descarte'
+    }
+    return labels[classification] || classification
+  }
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      new: 'Novo',
+      qualified: 'Qualificado',
+      in_analysis: 'Em Análise',
+      proposal: 'Proposta',
+      closed_won: 'Fechado',
+      closed_lost: 'Perdido'
+    }
+    return labels[status] || status
+  }
+
+  const getPrecatorioTypeLabel = (type?: string) => {
+    if (!type) return ''
+    const labels: Record<string, string> = {
+      federal: 'Federal',
+      estadual: 'Estadual',
+      municipal: 'Municipal',
+      trabalhista: 'Trabalhista',
+      parceria: 'Parceria',
+      honorarios: 'Honorários'
+    }
+    return labels[type] || type
+  }
+
+  const convertToCSV = (data: any[]): string => {
+    if (data.length === 0) return ''
+
+    const headers = Object.keys(data[0])
+    const csvRows = []
+
+    // Adicionar cabeçalhos
+    csvRows.push(headers.join(','))
+
+    // Adicionar dados
+    for (const row of data) {
+      const values = headers.map(header => {
+        const value = row[header]
+        // Escapar aspas e quebras de linha
+        const escaped = String(value || '').replace(/"/g, '""')
+        return `"${escaped}"`
+      })
+      csvRows.push(values.join(','))
+    }
+
+    return csvRows.join('\n')
+  }
+
+  const downloadCSV = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', filename)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }
+  }
+
+  const handleExportSelectedLeads = () => {
+    if (selectedLeads.size === 0) {
+      alert('Nenhum lead selecionado para exportação.')
+      return
+    }
+
+    // Filtrar apenas os leads selecionados
+    const selectedLeadsList = leads.filter(lead => selectedLeads.has(lead._id))
+
+    // Transformar dados para CSV
+    const csvData = selectedLeadsList.map(lead => ({
+      'Número': getLeadNumber(lead),
+      'Nome': lead.name,
+      'Telefone': lead.phone,
+      'Email': lead.email || '',
+      'CPF': lead.cpf || '',
+      'Score': lead.score,
+      'Classificação': getClassificationLabel(lead.classification),
+      'Status': getStatusLabel(lead.status),
+      'Tipo Precatório': getPrecatorioTypeLabel(lead.precatorioType),
+      'Valor Precatório': lead.precatorioValue ? formatCurrency(lead.precatorioValue) : '',
+      'Cidade': lead.city || '',
+      'Estado': lead.state || '',
+      'Responsável': lead.assignedTo || 'Não atribuído',
+      'Possui Precatório': lead.hasPrecatorio ? 'Sim' : 'Não',
+      'Elegível': lead.isEligible ? 'Sim' : 'Não',
+      'Urgência': lead.urgency || 'Não informado',
+      'Fonte': lead.source,
+      'Data de Criação': formatDate(lead.createdAt!),
+      'Última Interação': lead.lastInteraction ? formatDate(lead.lastInteraction) : ''
+    }))
+
+    // Converter para CSV e fazer download
+    const csvContent = convertToCSV(csvData)
+    const timestamp = new Date().toISOString().split('T')[0]
+    const filename = `leads-selecionados-${timestamp}.csv`
+
+    downloadCSV(csvContent, filename)
+
+    // Feedback para o usuário
+    alert(`${selectedLeads.size} lead(s) exportado(s) com sucesso para ${filename}!`)
+  }
+
   // Funções de paginação
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -337,15 +460,26 @@ export default function LeadsPage() {
         </div>
         <div className="flex gap-2">
           {selectedLeads.size > 0 && (
-            <Button
-              variant="destructive"
-              onClick={handleBulkDeleteClick}
-              className="self-start sm:self-auto"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Deletar {selectedLeads.size} selecionado(s)</span>
-              <span className="sm:hidden">Deletar ({selectedLeads.size})</span>
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={handleExportSelectedLeads}
+                className="self-start sm:self-auto text-green-600 border-green-300 hover:bg-green-50"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Exportar CSV ({selectedLeads.size})</span>
+                <span className="sm:hidden">CSV ({selectedLeads.size})</span>
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleBulkDeleteClick}
+                className="self-start sm:self-auto"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Deletar {selectedLeads.size} selecionado(s)</span>
+                <span className="sm:hidden">Deletar ({selectedLeads.size})</span>
+              </Button>
+            </>
           )}
           <Button className="self-start sm:self-auto">
             <Plus className="w-4 h-4 mr-2" />
