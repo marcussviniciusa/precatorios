@@ -53,6 +53,11 @@ export default function LeadsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean, leadId: string, leadName: string }>({ show: false, leadId: '', leadName: '' })
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Estados para seleção múltipla
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set())
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState<{ show: boolean, leadIds: string[], leadCount: number }>({ show: false, leadIds: [], leadCount: 0 })
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+
   // Paginação
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
@@ -151,6 +156,12 @@ export default function LeadsPage() {
       if (response.ok) {
         // Remove o lead da lista
         setLeads(prev => prev.filter(lead => lead._id !== deleteConfirm.leadId))
+        // Remove da seleção se estiver selecionado
+        setSelectedLeads(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(deleteConfirm.leadId)
+          return newSet
+        })
         alert('Lead e todos os dados relacionados foram deletados com sucesso!')
       } else {
         const error = await response.json()
@@ -164,6 +175,105 @@ export default function LeadsPage() {
       setDeleteConfirm({ show: false, leadId: '', leadName: '' })
     }
   }
+
+  // Funções para seleção múltipla
+  const handleSelectLead = (leadId: string, checked: boolean) => {
+    setSelectedLeads(prev => {
+      const newSet = new Set(prev)
+      if (checked) {
+        newSet.add(leadId)
+      } else {
+        newSet.delete(leadId)
+      }
+      return newSet
+    })
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      // Selecionar todos os leads filtrados e paginados
+      const allFilteredIds = new Set(filteredLeads.map(lead => lead._id))
+      setSelectedLeads(allFilteredIds)
+    } else {
+      // Desselecionar todos
+      setSelectedLeads(new Set())
+    }
+  }
+
+  const handleBulkDeleteClick = () => {
+    const selectedIds = Array.from(selectedLeads)
+    if (selectedIds.length === 0) return
+
+    setBulkDeleteConfirm({
+      show: true,
+      leadIds: selectedIds,
+      leadCount: selectedIds.length
+    })
+  }
+
+  const handleBulkDeleteCancel = () => {
+    setBulkDeleteConfirm({ show: false, leadIds: [], leadCount: 0 })
+  }
+
+  const handleBulkDeleteConfirm = async () => {
+    if (bulkDeleteConfirm.leadIds.length === 0) return
+
+    setIsBulkDeleting(true)
+    let successCount = 0
+    let errorCount = 0
+
+    try {
+      // Deletar leads em paralelo (máximo 5 por vez para não sobrecarregar)
+      const chunks = []
+      for (let i = 0; i < bulkDeleteConfirm.leadIds.length; i += 5) {
+        chunks.push(bulkDeleteConfirm.leadIds.slice(i, i + 5))
+      }
+
+      for (const chunk of chunks) {
+        const promises = chunk.map(leadId =>
+          fetch(`/api/leads/${leadId}/delete`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+          })
+        )
+
+        const responses = await Promise.all(promises)
+
+        // Contar sucessos e erros
+        responses.forEach(response => {
+          if (response.ok) {
+            successCount++
+          } else {
+            errorCount++
+          }
+        })
+      }
+
+      // Remover leads bem-sucedidos da lista
+      const successfulIds = bulkDeleteConfirm.leadIds.slice(0, successCount)
+      setLeads(prev => prev.filter(lead => !successfulIds.includes(lead._id)))
+
+      // Limpar seleção
+      setSelectedLeads(new Set())
+
+      // Mostrar resultado
+      if (errorCount === 0) {
+        alert(`${successCount} lead(s) deletado(s) com sucesso!`)
+      } else {
+        alert(`${successCount} lead(s) deletado(s) com sucesso, ${errorCount} erro(s).`)
+      }
+    } catch (error) {
+      console.error('Erro na exclusão em lote:', error)
+      alert('Erro interno na exclusão em lote. Tente novamente.')
+    } finally {
+      setIsBulkDeleting(false)
+      setBulkDeleteConfirm({ show: false, leadIds: [], leadCount: 0 })
+    }
+  }
+
+  // Verificar se todos os leads filtrados estão selecionados
+  const isAllSelected = filteredLeads.length > 0 && filteredLeads.every(lead => selectedLeads.has(lead._id))
+  const isPartiallySelected = selectedLeads.size > 0 && !isAllSelected
 
   // Funções de paginação
   const handlePageChange = (page: number) => {
@@ -225,11 +335,24 @@ export default function LeadsPage() {
           <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Leads</h1>
           <p className="text-sm sm:text-base text-gray-600">Gerencie todos os seus leads de precatórios</p>
         </div>
-        <Button className="self-start sm:self-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          <span className="hidden sm:inline">Novo Lead</span>
-          <span className="sm:hidden">Novo</span>
-        </Button>
+        <div className="flex gap-2">
+          {selectedLeads.size > 0 && (
+            <Button
+              variant="destructive"
+              onClick={handleBulkDeleteClick}
+              className="self-start sm:self-auto"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Deletar {selectedLeads.size} selecionado(s)</span>
+              <span className="sm:hidden">Deletar ({selectedLeads.size})</span>
+            </Button>
+          )}
+          <Button className="self-start sm:self-auto">
+            <Plus className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Novo Lead</span>
+            <span className="sm:hidden">Novo</span>
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -320,6 +443,15 @@ export default function LeadsPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-medium text-gray-900 w-12">
+                        <input
+                          type="checkbox"
+                          checked={isAllSelected}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
+                          title={isAllSelected ? "Desselecionar todos" : "Selecionar todos"}
+                        />
+                      </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900 w-16">#</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Nome</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Contato</th>
@@ -336,6 +468,14 @@ export default function LeadsPage() {
                   <tbody>
                   {paginatedLeads.map((lead) => (
                     <tr key={lead._id} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.has(lead._id)}
+                          onChange={(e) => handleSelectLead(lead._id, e.target.checked)}
+                          className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
+                        />
+                      </td>
                       <td className="py-3 px-4">
                         <span className="font-medium text-primary text-sm">
                           #{getLeadNumber(lead)}
@@ -438,14 +578,22 @@ export default function LeadsPage() {
                 {paginatedLeads.map((lead) => (
                   <div key={lead._id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">#{getLeadNumber(lead)}</span>
-                          <h3 className="font-medium text-gray-900 text-lg">{lead.name}</h3>
-                        </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          <div>{lead.phone}</div>
-                          {lead.email && <div>{lead.email}</div>}
+                      <div className="flex items-start space-x-3 flex-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.has(lead._id)}
+                          onChange={(e) => handleSelectLead(lead._id, e.target.checked)}
+                          className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2 mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded">#{getLeadNumber(lead)}</span>
+                            <h3 className="font-medium text-gray-900 text-lg">{lead.name}</h3>
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            <div>{lead.phone}</div>
+                            {lead.email && <div>{lead.email}</div>}
+                          </div>
                         </div>
                       </div>
                       <div className="flex space-x-2">
@@ -635,6 +783,54 @@ export default function LeadsPage() {
                 disabled={isDeleting}
               >
                 {isDeleting ? 'Deletando...' : 'Deletar Definitivamente'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Exclusão em Lote */}
+      {bulkDeleteConfirm.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Confirmar Exclusão em Lote
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Tem certeza que deseja deletar completamente <strong>{bulkDeleteConfirm.leadCount} lead(s) selecionado(s)</strong>?
+              Esta ação irá remover para cada lead:
+            </p>
+            <ul className="text-sm text-gray-600 mb-6 list-disc list-inside">
+              <li>Dados do lead</li>
+              <li>Todas as conversas</li>
+              <li>Histórico de mensagens</li>
+              <li>Atividades relacionadas</li>
+              <li>Logs de IA e pontuação</li>
+            </ul>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <p className="text-yellow-800 text-sm">
+                <strong>Atenção:</strong> A exclusão será feita em lotes de 5 leads por vez.
+                O processo pode levar alguns segundos para ser concluído.
+              </p>
+            </div>
+            <p className="text-red-600 text-sm font-medium mb-6">
+              ⚠️ Esta ação não pode ser desfeita!
+            </p>
+
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleBulkDeleteCancel}
+                disabled={isBulkDeleting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleBulkDeleteConfirm}
+                disabled={isBulkDeleting}
+              >
+                {isBulkDeleting ? `Deletando... (${bulkDeleteConfirm.leadCount} leads)` : `Deletar ${bulkDeleteConfirm.leadCount} Lead(s)`}
               </Button>
             </div>
           </div>
