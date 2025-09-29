@@ -941,14 +941,16 @@ export default function ConversationsPage() {
           {showConversationList ? (
             /* Lista de Conversas Mobile */
             <Card className="flex flex-col h-full overflow-hidden">
-              <CardHeader className="flex-shrink-0 pb-3">
-                <CardTitle className="flex items-center justify-between text-lg">
-                  <span>Conversas ({conversations.length})</span>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </CardTitle>
-              </CardHeader>
+              {/* Header mobile com controles */}
+              <ConversationsHeader
+                totalCount={totalCount}
+                itemsPerPage={itemsPerPage}
+                pageInfo={pageInfo}
+                showingAll={showingAll}
+                loading={conversationsLoading}
+                onItemsPerPageChange={setItemsPerPage}
+                onRefresh={refresh}
+              />
               <CardContent className="p-0 flex-1 overflow-hidden">
                 {conversations.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
@@ -1035,6 +1037,18 @@ export default function ConversationsPage() {
                   </div>
                 )}
               </CardContent>
+
+              {/* Adicionar paginação no mobile */}
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                pageInfo={pageInfo}
+                itemsPerPage={itemsPerPage}
+                totalCount={totalCount}
+                showingAll={showingAll}
+                loading={conversationsLoading}
+                onPageChange={fetchPage}
+              />
             </Card>
           ) : (
             /* Chat View Mobile */
