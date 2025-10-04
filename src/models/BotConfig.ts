@@ -127,6 +127,9 @@ Regras importantes:
     cacheHours: { type: Number, default: 24 },
     maxProcessos: { type: Number, default: 10 }
   },
+  bitrixConfig: {
+    scoreThreshold: { type: Number, default: 80 }
+  },
   updatedBy: { type: String, ref: 'User' }
 }, {
   timestamps: true

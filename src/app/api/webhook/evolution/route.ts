@@ -394,8 +394,141 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Função para verificar e enviar lead para Bitrix baseado em score
+async function checkAndSendToBitrix(
+  lead: any,
+  previousScore: number,
+  config: any,
+  conversationId: string
+) {
+  try {
+    // Pegar scoreThreshold configurado pelo usuário (variável)
+    const scoreThreshold = config.bitrixConfig?.scoreThreshold || 80
+    const currentScore = lead.score || 0
+
+    // Verificar se o lead CRUZOU o threshold pela primeira vez
+    const crossedThreshold = previousScore < scoreThreshold && currentScore >= scoreThreshold
+
+    if (!crossedThreshold) {
+      return // Não cruzou o threshold, não faz nada
+    }
+
+    // Verificar se integração Bitrix está ativa
+    const bitrixWebhookUrl = process.env.BITRIX_WEBHOOK_URL
+    const bitrixEnabled = process.env.BITRIX_INTEGRATION_ENABLED === 'true'
+
+    if (!bitrixWebhookUrl || !bitrixEnabled) {
+      console.log('Bitrix integration is not configured or disabled')
+      return
+    }
+
+    console.log(`Lead ${lead._id} crossed score threshold (${previousScore} -> ${currentScore} >= ${scoreThreshold}). Triggering Bitrix integration...`)
+
+    // Verificar se já foi enviado anteriormente (evitar duplicação)
+    const existingLog = await TransferLog.findOne({
+      leadId: lead._id.toString(),
+      'metadata.bitrixSent': true
+    })
+
+    if (existingLog) {
+      console.log(`Lead ${lead._id} already sent to Bitrix (dealId: ${existingLog.metadata?.bitrixDealId}). Skipping.`)
+      return
+    }
+
+    // Buscar resumo do lead (se existir)
+    const LeadSummary = (await import('@/models/LeadSummary')).default
+    const summary = await LeadSummary.findOne({ leadId: lead._id.toString() })
+
+    // Preparar comentários
+    let comments = `Lead importado automaticamente do sistema de WhatsApp.\n\n`
+    comments += `Score: ${currentScore}\n`
+    comments += `Classificação: ${lead.classification}\n`
+    comments += `Telefone: ${lead.phone}\n`
+    comments += `Status: ${lead.hasPrecatorio ? 'Possui precatório' : 'Não possui precatório'}\n`
+    comments += `Tipo: ${lead.precatorioType || 'Não informado'}\n`
+    comments += `Elegível: ${lead.isEligible ? 'Sim' : 'Não'}\n`
+    comments += `Urgência: ${lead.urgency || 'Não informado'}\n\n`
+
+    if (summary) {
+      comments += `RESUMO IA: ${summary.summary}\n\n`
+      if (summary.keyPoints && summary.keyPoints.length > 0) {
+        comments += `PONTOS PRINCIPAIS:\n${summary.keyPoints.map((p: string) => `• ${p}`).join('\n')}\n\n`
+      }
+    }
+
+    // Preparar dados para Bitrix Deal
+    const bitrixData = {
+      fields: {
+        TITLE: `Lead WhatsApp: ${lead.name || 'Sem nome'}`,
+        STAGE_ID: "C19:NEW",
+        CATEGORY_ID: 19,
+        ASSIGNED_BY_ID: parseInt(process.env.BITRIX_DEFAULT_USER_ID || '1218'),
+        OPPORTUNITY: lead.precatorioValue || 0,
+        CURRENCY_ID: "BRL",
+        COMMENTS: comments
+      }
+    }
+
+    // Criar log de transferência ANTES do envio
+    const transferLog = await TransferLog.create({
+      leadId: lead._id.toString(),
+      fromStatus: 'active',
+      toStatus: 'bitrix_sent',
+      reason: `Score atingiu ${currentScore} (threshold: ${scoreThreshold})`,
+      triggeredBy: 'ai',
+      metadata: {
+        score: currentScore,
+        classification: lead.classification,
+        conversationId,
+        bitrixSent: false,
+        previousScore,
+        scoreThreshold
+      }
+    })
+
+    // Enviar para Bitrix de forma assíncrona
+    fetch(`${bitrixWebhookUrl}/crm.deal.add`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(bitrixData)
+    })
+    .then(async (response) => {
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Bitrix deal created successfully:', result)
+
+        // Atualizar TransferLog com sucesso
+        await TransferLog.findByIdAndUpdate(transferLog._id, {
+          'metadata.bitrixSent': true,
+          'metadata.bitrixDealId': result.result?.toString() || null,
+          'metadata.bitrixSentAt': new Date()
+        })
+      } else {
+        const errorText = await response.text()
+        console.error('Bitrix webhook failed:', response.status, errorText)
+        await TransferLog.findByIdAndUpdate(transferLog._id, {
+          'metadata.bitrixSent': false,
+          'metadata.bitrixError': `HTTP ${response.status}: ${errorText}`
+        })
+      }
+    })
+    .catch(async (error) => {
+      console.error('Bitrix integration error:', error)
+      await TransferLog.findByIdAndUpdate(transferLog._id, {
+        'metadata.bitrixSent': false,
+        'metadata.bitrixError': error.message
+      })
+    })
+
+  } catch (error) {
+    console.error('Error in checkAndSendToBitrix:', error)
+  }
+}
+
 async function scheduleAIProcessing(
-  lead: any, 
+  lead: any,
   conversation: any,
   instanceName: string
 ) {
@@ -602,6 +735,7 @@ async function processMessageWithAI(
 
     // 2. Calcular score usando IA
     if (config.aiConfig.settings.autoScoring) {
+      const previousScore = lead.score || 0
       const scoreResult = await ai.calculateScore(lead, conversationHistory, escavadorEnabled, lead._id.toString(), config.aiConfig.prompts.scoring)
 
       if (scoreResult.score !== lead.score) {
@@ -613,6 +747,9 @@ async function processMessageWithAI(
         // Atualizar lead local
         lead.score = scoreResult.score
         lead.classification = scoreResult.classification
+
+        // 🚀 NOVO GATILHO: Enviar para Bitrix quando score atingir threshold configurado
+        await checkAndSendToBitrix(lead, previousScore, config, conversation._id.toString())
       }
     }
 
@@ -635,18 +772,8 @@ async function processMessageWithAI(
           'metadata.priority': 'medium' // Pode ser melhorado com lógica de prioridade baseada no score
         })
 
-        // Verificar se é a primeira transferência IA -> Humano para este lead
-        const previousTransfers = await TransferLog.find({
-          leadId: lead._id.toString(),
-          fromStatus: 'active',
-          toStatus: 'transferred',
-          triggeredBy: 'ai'
-        })
-
-        const isFirstAITransfer = previousTransfers.length === 0
-
-        // Log transfer
-        const transferLog = await TransferLog.create({
+        // Log transfer (sem integração Bitrix aqui)
+        await TransferLog.create({
           leadId: lead._id.toString(),
           fromStatus: 'active',
           toStatus: 'transferred',
@@ -655,80 +782,9 @@ async function processMessageWithAI(
           metadata: {
             score: lead.score,
             classification: lead.classification,
-            conversationId: conversation._id.toString(),
-            isFirstAITransfer,
-            bitrixSent: false // Flag para controle de duplicação
+            conversationId: conversation._id.toString()
           }
         })
-
-        // 🚀 TRIGGER: Enviar para Bitrix na primeira transferência IA -> Humano
-        if (isFirstAITransfer) {
-          console.log(`First AI transfer for lead ${lead._id} - triggering Bitrix integration`)
-
-          try {
-            // Verificar se webhook Bitrix está configurado
-            const bitrixWebhookUrl = process.env.BITRIX_WEBHOOK_URL
-            const bitrixEnabled = process.env.BITRIX_INTEGRATION_ENABLED === 'true'
-
-            if (bitrixWebhookUrl && bitrixEnabled) {
-              // Extrair primeiro nome e sobrenome
-              const nameParts = lead.name?.split(' ') || ['']
-              const firstName = nameParts[0] || ''
-              const lastName = nameParts.slice(1).join(' ') || ''
-
-              // Preparar dados para Bitrix Deal
-              const bitrixData = {
-                fields: {
-                  TITLE: `Lead WhatsApp: ${lead.name || 'Sem nome'}`,
-                  STAGE_ID: "C19:NEW",
-                  CATEGORY_ID: 19,
-                  ASSIGNED_BY_ID: parseInt(process.env.BITRIX_DEFAULT_USER_ID || '1218'),
-                  OPPORTUNITY: lead.precatorioValue || 0,
-                  CURRENCY_ID: "BRL",
-                  // Dados adicionais do lead
-                  COMMENTS: `Resumo da IA: ${transferLog.summary || 'Sem resumo disponível'}\n\nTelefone: ${lead.phone}\nStatus: ${lead.hasPrecatorio ? 'Possui precatório' : 'Não possui precatório'}\nTipo: ${lead.precatorioType || 'Não informado'}\nElegível: ${lead.isEligible ? 'Sim' : 'Não'}\nUrgência: ${lead.urgency || 'Não informado'}\nClassificação: ${lead.classification || 'Não classificado'}`
-                }
-              }
-
-              // Chamar webhook Bitrix diretamente
-              fetch(`${bitrixWebhookUrl}/crm.deal.add`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(bitrixData)
-              })
-              .then(async (response) => {
-                if (response.ok) {
-                  const result = await response.json()
-                  console.log('Bitrix deal created successfully:', result)
-
-                  // Atualizar TransferLog com sucesso
-                  await TransferLog.findByIdAndUpdate(transferLog._id, {
-                    bitrixSent: true,
-                    bitrixDealId: result.result?.toString() || null,
-                    bitrixSentAt: new Date()
-                  })
-                } else {
-                  console.error('Bitrix webhook failed:', response.status, response.statusText)
-                  await TransferLog.findByIdAndUpdate(transferLog._id, {
-                    bitrixSent: false,
-                    bitrixError: `HTTP ${response.status}: ${response.statusText}`
-                  })
-                }
-              })
-              .catch(async (error) => {
-                console.error('Bitrix integration error:', error)
-                await TransferLog.findByIdAndUpdate(transferLog._id, {
-                  bitrixSent: false,
-                  bitrixError: error.message
-                })
-              })
-            }
-          } catch (error) {
-            console.error('Error in Bitrix webhook integration:', error)
-          }
-        }
 
         return
       }

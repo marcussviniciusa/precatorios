@@ -183,6 +183,9 @@ export interface BotConfig {
     cacheHours?: number
     maxProcessos?: number
   }
+  bitrixConfig?: {
+    scoreThreshold?: number
+  }
   updatedAt?: Date
   updatedBy?: string
 }

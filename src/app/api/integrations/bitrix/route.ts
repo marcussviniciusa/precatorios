@@ -53,7 +53,7 @@ const BITRIX_CONFIG: BitrixConfig = {
   defaultAssignedUserId: parseInt(process.env.BITRIX_DEFAULT_USER_ID || '1')
 }
 
-// POST - Enviar lead para Bitrix CRM
+// POST - Salvar scoreThreshold OU Enviar lead para Bitrix CRM
 export async function POST(request: NextRequest) {
   try {
     await dbConnect()
@@ -69,7 +69,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
 
-    const { leadId, transferLogId } = await request.json()
+    const body = await request.json()
+
+    // Se veio scoreThreshold, salvar configuração
+    if (body.scoreThreshold !== undefined) {
+      const BotConfig = (await import('@/models/BotConfig')).default
+      const config = await BotConfig.findOne().sort({ updatedAt: -1 })
+
+      if (!config) {
+        return NextResponse.json({ error: 'Configuração não encontrada' }, { status: 404 })
+      }
+
+      // Atualizar apenas o scoreThreshold
+      config.bitrixConfig = config.bitrixConfig || {}
+      config.bitrixConfig.scoreThreshold = body.scoreThreshold
+      config.updatedBy = user.userId
+      await config.save()
+
+      return NextResponse.json({
+        message: 'Score threshold salvo com sucesso',
+        scoreThreshold: body.scoreThreshold
+      })
+    }
+
+    // Caso contrário, é envio de lead
+    const { leadId, transferLogId } = body
 
     if (!leadId || !transferLogId) {
       return NextResponse.json({
@@ -150,6 +174,8 @@ export async function POST(request: NextRequest) {
 // GET - Obter status da integração
 export async function GET(request: NextRequest) {
   try {
+    await dbConnect()
+
     // Verificar autenticação
     const token = getTokenFromRequest(request)
     if (!token) {
@@ -161,10 +187,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
 
+    // Buscar scoreThreshold do banco de dados
+    const BotConfig = (await import('@/models/BotConfig')).default
+    const config = await BotConfig.findOne().sort({ updatedAt: -1 })
+    const scoreThreshold = config?.bitrixConfig?.scoreThreshold || 80
+
     return NextResponse.json({
       isActive: BITRIX_CONFIG.isActive,
       webhookConfigured: !!BITRIX_CONFIG.webhookUrl,
-      defaultUserId: BITRIX_CONFIG.defaultAssignedUserId
+      defaultUserId: BITRIX_CONFIG.defaultAssignedUserId,
+      scoreThreshold: scoreThreshold // NOVO: retornar scoreThreshold variável
     })
 
   } catch (error) {

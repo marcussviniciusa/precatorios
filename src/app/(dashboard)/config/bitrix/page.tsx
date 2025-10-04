@@ -11,7 +11,8 @@ import {
   AlertCircle,
   Copy,
   Eye,
-  EyeOff
+  EyeOff,
+  Target
 } from 'lucide-react'
 import { getAuthHeaders } from '@/lib/client-auth'
 
@@ -19,19 +20,22 @@ interface BitrixConfig {
   webhookUrl: string
   isActive: boolean
   defaultUserId: number
+  scoreThreshold: number
 }
 
 interface BitrixStatus {
   isActive: boolean
   webhookConfigured: boolean
   defaultUserId: number
+  scoreThreshold: number
 }
 
 export default function BitrixConfigPage() {
   const [config, setConfig] = useState<BitrixConfig>({
     webhookUrl: '',
     isActive: false,
-    defaultUserId: 1
+    defaultUserId: 1,
+    scoreThreshold: 80 // Valor inicial padrão, mas será carregado do banco
   })
   const [status, setStatus] = useState<BitrixStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -54,7 +58,8 @@ export default function BitrixConfigPage() {
         setConfig(prev => ({
           ...prev,
           isActive: data.isActive,
-          defaultUserId: data.defaultUserId
+          defaultUserId: data.defaultUserId,
+          scoreThreshold: data.scoreThreshold || 80 // Carregar do banco ou usar padrão
         }))
       }
     } catch (error) {
@@ -67,10 +72,23 @@ export default function BitrixConfigPage() {
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      // Em um cenário real, você salvaria essas configurações no banco
-      // Por agora, apenas simular o salvamento
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      alert('Configurações salvas com sucesso! Reinicie a aplicação para aplicar as mudanças.')
+      const response = await fetch('/api/integrations/bitrix', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          scoreThreshold: config.scoreThreshold
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao salvar configurações')
+      }
+
+      const result = await response.json()
+      alert(result.message || 'Configurações salvas com sucesso!')
+
+      // Recarregar status para garantir sincronização
+      await fetchStatus()
     } catch (error) {
       console.error('Error saving config:', error)
       alert('Erro ao salvar configurações')
@@ -280,6 +298,49 @@ export default function BitrixConfigPage() {
             />
             <p className="text-xs text-gray-500 mt-1">
               ID do usuário do Bitrix que será responsável pelos leads importados
+            </p>
+          </div>
+
+          {/* Score Threshold - NOVO CAMPO */}
+          <div className="border-t pt-6">
+            <div className="flex items-center space-x-2 mb-2">
+              <Target className="w-5 h-5 text-primary" />
+              <label className="text-sm font-medium">Pontuação Mínima para Envio ao Bitrix</label>
+            </div>
+            <div className="flex items-center space-x-4">
+              <input
+                type="number"
+                value={config.scoreThreshold}
+                onChange={(e) => setConfig(prev => ({ ...prev, scoreThreshold: parseInt(e.target.value) || 80 }))}
+                className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-center text-lg font-semibold"
+                min="0"
+                max="200"
+              />
+              <div className="flex-1">
+                <input
+                  type="range"
+                  value={config.scoreThreshold}
+                  onChange={(e) => setConfig(prev => ({ ...prev, scoreThreshold: parseInt(e.target.value) }))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  min="0"
+                  max="200"
+                  step="5"
+                />
+              </div>
+              <div className={`px-3 py-1 rounded-md text-sm font-medium ${
+                config.scoreThreshold >= 80 ? 'bg-red-100 text-red-800' :
+                config.scoreThreshold >= 50 ? 'bg-yellow-100 text-yellow-800' :
+                config.scoreThreshold >= 20 ? 'bg-blue-100 text-blue-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {config.scoreThreshold >= 80 ? 'Hot' :
+                 config.scoreThreshold >= 50 ? 'Warm' :
+                 config.scoreThreshold >= 20 ? 'Cold' :
+                 'Todos'}
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Leads com pontuação igual ou superior a <strong>{config.scoreThreshold}</strong> serão enviados automaticamente para o Bitrix (apenas na primeira vez que atingirem este valor)
             </p>
           </div>
 
